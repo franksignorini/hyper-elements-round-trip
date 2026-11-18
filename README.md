@@ -19,7 +19,8 @@
 </p>
 
 <p align="center">
-  <a href="../../deployments/github-pages"><b>▶ Open the live demo</b></a> ·
+  <a href="https://franksignorini.github.io/hyper-elements-round-trip/"><b>▶ Open the live demo</b></a> ·
+  <a href="https://franksignorini.github.io/hyper-elements-round-trip/studio/">Open the studio</a> ·
   <a href="#run-it">Run it locally</a> ·
   <a href="#how-it-works">How it works</a> ·
   <a href="template/Newsletter.tsx">See the template</a>

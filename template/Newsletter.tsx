@@ -45,7 +45,7 @@ const IssueStamp = defineElement({
 
 export default function Newsletter({
   issue = data,
-  assetBase = "https://hyper-elements-round-trip.vercel.app",
+  assetBase = "https://franksignorini.github.io/hyper-elements-round-trip",
 }: {
   issue?: Issue;
   assetBase?: string;

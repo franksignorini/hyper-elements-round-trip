@@ -13,7 +13,7 @@ const mono = JetBrains_Mono({ variable: "--font-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   // Absolute URLs for the share card. The Pages workflow sets NEXT_PUBLIC_SITE_URL to the site's origin.
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://hyper-elements-round-trip.vercel.app"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://franksignorini.github.io"),
   twitter: { card: "summary_large_image" },
   title: "Round Trip: one email template, in code and in the builder",
   description:

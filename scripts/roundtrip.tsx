@@ -10,7 +10,7 @@ import { ownership } from "../src/lib/rt/ownership";
 import type { Design } from "../src/lib/rt/design";
 
 const FILES = ["Newsletter.tsx", "theme.ts", "issue.json"];
-const ASSET_BASE = process.env.ASSET_BASE ?? "https://hyper-elements-round-trip.vercel.app";
+const ASSET_BASE = process.env.ASSET_BASE ?? "https://franksignorini.github.io/hyper-elements-round-trip";
 const c = {
   blue: (s: string) => `\x1b[38;2;43;69;255m${s}\x1b[0m`,
   orange: (s: string) => `\x1b[38;2;255;90;44m${s}\x1b[0m`,
