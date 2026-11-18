@@ -1,0 +1,74 @@
+# Checks every push, and publishes the landing page and the studio to GitHub Pages.
+# One-time setup: Settings → Pages → Build and deployment → Source: "GitHub Actions".
+name: Check and deploy to Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Lint, typecheck, template check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npx eslint .
+      # hyper-elements check: the template must stay at 0 errors, 0 warnings.
+      - run: npm run check
+      # The full Node build, API routes and all, as a Node host would run it.
+      - run: npm run build
+
+  build-pages:
+    name: Build the static site
+    needs: check
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - id: pages
+        uses: actions/configure-pages@v5
+      - run: npm ci
+      - name: Build (static export under the repo's base path)
+        run: npm run build
+        env:
+          STATIC_EXPORT: "1"
+          NEXT_PUBLIC_STATIC_SITE: "1"
+          NEXT_PUBLIC_BASE_PATH: ${{ steps.pages.outputs.base_path }}
+          # The origin only: Next adds the base path to metadata URLs itself.
+          NEXT_PUBLIC_SITE_URL: ${{ steps.pages.outputs.origin }}
+      - run: touch out/.nojekyll
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: out
+
+  deploy:
+    name: Deploy
+    needs: build-pages
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
