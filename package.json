@@ -7,7 +7,7 @@
     "build": "node scripts/embed-sources.mjs && next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "node scripts/embed-sources.mjs && tsc --noEmit",
+    "typecheck": "node scripts/embed-sources.mjs && next typegen && tsc --noEmit",
     "art": "tsx scripts/art.tsx",
     "check": "hyper-elements check template/Newsletter.tsx",
     "push": "tsx scripts/roundtrip.tsx push",
