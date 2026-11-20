@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="../../actions/workflows/pages.yml"><img src="../../actions/workflows/pages.yml/badge.svg" alt="Check and deploy" /></a>
-  <img src="https://img.shields.io/badge/Hyper%20Elements-0.4-2b45ff" alt="Hyper Elements 0.4" />
+  <img src="https://img.shields.io/badge/Hyper%20Elements-0.5-2b45ff" alt="Hyper Elements 0.5" />
   <img src="https://img.shields.io/badge/hyper--elements%20check-0%20errors%20·%200%20warnings-1f9d55" alt="hyper-elements check: 0 errors, 0 warnings" />
   <img src="https://img.shields.io/badge/email%20clients-9%2F9%20pass-ff5a2c" alt="9 of 9 email clients pass" />
   <img src="https://img.shields.io/badge/license-MIT-1d1b17" alt="MIT license" />
