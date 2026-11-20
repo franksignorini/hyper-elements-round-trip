@@ -90,18 +90,8 @@ const DATA = "issue.values.json";
 
 /** Where a build error points, in the template's files. */
 export function locateError(files: Record<string, string>, raw: string): BuildError {
-  // A value the template refuses: "issue.values.json: Headline: is longer… (at values.hero.title)".
-  const refused = /^issue\.values\.json: ([\s\S]+?)(?: \(at ([^)]+)\))?$/.exec(raw);
-  if (refused && files[DATA] !== undefined) {
-    const [, reason, at] = refused;
-    const line = at ? jsonValueLine(files[DATA], parsePath(at)) : null;
-    return {
-      file: DATA,
-      line: line ?? undefined,
-      message: `The template refuses ${DATA}${line ? ` at line ${line}` : ""}: ${reason}.`,
-    };
-  }
-  // issue.values.json that doesn't parse.
+  // issue.values.json that doesn't parse. First: the template imports the file, so its
+  // syntax error also arrives as "issue.values.json: …" and must not read as a refusal.
   if (/JSON/.test(raw) && files[DATA] !== undefined) {
     const at = jsonErrorOffset(files[DATA]);
     if (at >= 0) {
@@ -118,6 +108,17 @@ export function locateError(files: Record<string, string>, raw: string): BuildEr
         message: `${DATA} isn't valid JSON ${lines.length > 1 ? `between lines ${before} and ${failed}` : `at line ${line}`}. Check for a missing quote or comma.`,
       };
     }
+  }
+  // A value the template refuses: "issue.values.json: Headline: is longer… (at values.hero.title)".
+  const refused = /^issue\.values\.json: ([\s\S]+?)(?: \(at ([^)]+)\))?$/.exec(raw);
+  if (refused && files[DATA] !== undefined) {
+    const [, reason, at] = refused;
+    const line = at ? jsonValueLine(files[DATA], parsePath(at)) : null;
+    return {
+      file: DATA,
+      line: line ?? undefined,
+      message: `The template refuses ${DATA}${line ? ` at line ${line}` : ""}: ${reason}.`,
+    };
   }
   // Sucrase: "Newsletter.tsx: Error transforming Newsletter.tsx: Unexpected token (61:70)".
   const transform = /^([\w.]+\.tsx?):[\s\S]*?:\s*([\s\S]+?)\s*\((\d+):(\d+)\)\s*$/.exec(raw);

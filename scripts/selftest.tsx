@@ -8,6 +8,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { build, DATA, pull, type Change } from "../src/lib/rt/engine";
 import { blocksOf, type Design, type Json } from "../src/lib/rt/design";
 import { tokensIn } from "../src/lib/rt/bind";
+import { locateError } from "../src/lib/rt/errors";
 
 const FILES = ["Newsletter.tsx", "theme.ts", DATA];
 let failures = 0;
@@ -108,6 +109,20 @@ if (headline) {
   ok(result.changes.length === 1 && only.kind === "conflict" && /template refuses/.test(only.reason), "over-long headline is held back by the template", only?.kind === "conflict" ? only.reason : JSON.stringify(only));
   ok(result.files[DATA] === files[DATA], "held-back edit leaves the values file untouched");
 } else ok(false, "found the headline block");
+
+// 5. Errors point at the right thing: a JSON typo is a JSON error, a refused value names its field's line.
+const located = (next: Record<string, string>) => {
+  try {
+    build(next);
+    return null;
+  } catch (e) {
+    return locateError(next, (e as Error).message);
+  }
+};
+const typo = located({ ...files, [DATA]: files[DATA].replace('"date": "November 2026",', '"date": "November 2026"') });
+ok(Boolean(typo && /isn't valid JSON/.test(typo.message)), "a JSON typo reads as a JSON error", typo?.message);
+const refused = located({ ...files, [DATA]: files[DATA].replace('"date": "November 2026"', '"date": "November 2026 and the whole of December"') });
+ok(Boolean(refused && /template refuses/.test(refused.message) && refused.line === 7), "a refused value points at its line", refused?.message);
 
 console.log(failures ? `\n${failures} check(s) failed` : "\nall checks passed");
 process.exitCode = failures ? 1 : 0;
