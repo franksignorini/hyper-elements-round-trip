@@ -81,6 +81,11 @@ pre,
   100% { transform: translate(0, 0); }
 }
 
+/* The first-load intro: hidden from the first paint when the pre-paint script skips it. */
+html[data-intro="skip"] .press-intro {
+  display: none;
+}
+
 [data-tone="blue"] {
   --tone: var(--blue);
 }

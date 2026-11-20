@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Bodoni_Moda, Bricolage_Grotesque, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { PRE_PAINT } from "@/components/landing/introScript";
 
 const display = Bricolage_Grotesque({
   variable: "--font-display",
@@ -22,7 +23,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${display.variable} ${serif.variable} ${mono.variable}`}>
+    // The pre-paint script sets html[data-intro] before React runs, hence suppressHydrationWarning.
+    <html lang="en" className={`${display.variable} ${serif.variable} ${mono.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: PRE_PAINT }} />
+      </head>
       <body>
         {children}
         <div className="grain" aria-hidden />

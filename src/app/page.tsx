@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Hero } from "@/components/landing/Hero";
+import { PressIntro } from "@/components/landing/PressIntro";
 import { Manifesto } from "@/components/landing/Manifesto";
 import { HowItWorks } from "@/components/landing/HowItWorks";
 import { Plates } from "@/components/landing/Plates";
@@ -11,6 +12,7 @@ export default async function Home() {
   const data = await landingData();
   return (
     <main className={styles.page}>
+      <PressIntro />
       <Hero blocks={data.blocks} bound={data.bound} />
       <Manifesto />
       <HowItWorks />

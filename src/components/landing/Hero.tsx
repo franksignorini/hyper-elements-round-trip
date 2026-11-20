@@ -5,12 +5,13 @@ import { motion, useMotionValue, useSpring, useTransform } from "motion/react";
 import { useEffect } from "react";
 import { Film } from "./Film";
 import { HeroProof } from "./HeroProof";
+import { useIntroPlaying } from "./introGate";
 import styles from "./landing.module.css";
 
 const ROUND = "ROUND".split("");
 const TRIP = "TRIP".split("");
 
-function Plate({ letters, tone, delay }: { letters: string[]; tone: "blue" | "orange"; delay: number }) {
+function Plate({ letters, tone, delay, go }: { letters: string[]; tone: "blue" | "orange"; delay: number; go: boolean }) {
   return (
     <span className={styles.plateWord} data-tone={tone} aria-hidden>
       {letters.map((l, i) => (
@@ -18,7 +19,7 @@ function Plate({ letters, tone, delay }: { letters: string[]; tone: "blue" | "or
           key={i}
           className={styles.letter}
           initial={{ y: "70%", opacity: 0, rotate: tone === "blue" ? -8 : 8 }}
-          animate={{ y: 0, opacity: 1, rotate: 0 }}
+          animate={go ? { y: 0, opacity: 1, rotate: 0 } : undefined}
           transition={{ delay: delay + i * 0.06, type: "spring", stiffness: 210, damping: 16 }}
         >
           {l}
@@ -29,6 +30,8 @@ function Plate({ letters, tone, delay }: { letters: string[]; tone: "blue" | "or
 }
 
 export function Hero({ blocks, bound }: { blocks: number; bound: number }) {
+  // The title prints as the first-load intro lifts off, not underneath it.
+  const go = !useIntroPlaying();
   // The two inks drift apart with the cursor, like a press slightly out of register.
   const mx = useMotionValue(0);
   const my = useMotionValue(0);
@@ -95,7 +98,7 @@ export function Hero({ blocks, bound }: { blocks: number; bound: number }) {
         <motion.p
           className={styles.heroKicker}
           initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
+          animate={go ? { opacity: 1, y: 0 } : undefined}
           transition={{ delay: 0.6 }}
         >
           A Hyper Elements newsletter template · one file, two editors
@@ -103,10 +106,10 @@ export function Hero({ blocks, bound }: { blocks: number; bound: number }) {
         <h1 className={styles.title}>
           <span className="sr-only">Round Trip</span>
           <motion.span className={styles.titleLine} style={{ x: bx, y: by }}>
-            <Plate letters={ROUND} tone="blue" delay={0.1} />
+            <Plate letters={ROUND} tone="blue" delay={0.1} go={go} />
           </motion.span>
           <motion.span className={styles.titleLine} data-second style={{ x: ox, y: oy }}>
-            <Plate letters={TRIP} tone="orange" delay={0.35} />
+            <Plate letters={TRIP} tone="orange" delay={0.35} go={go} />
           </motion.span>
         </h1>
       </div>
@@ -114,7 +117,7 @@ export function Hero({ blocks, bound }: { blocks: number; bound: number }) {
       <motion.div
         className={styles.heroCopy}
         initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
+        animate={go ? { opacity: 1, y: 0 } : undefined}
         transition={{ delay: 0.9, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
       >
         <div className={styles.heroLeft}>
