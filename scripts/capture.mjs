@@ -59,9 +59,29 @@ const localArt = (route) => {
   await page.close();
 }
 
+// ---- studio, a first visit: the intro that plays while the builder loads ----
+{
+  const first = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  await first.route(ART, localArt);
+  const intro = await first.newPage();
+  await intro.goto(`${base}/studio`, { waitUntil: "domcontentloaded" });
+  await intro.addStyleTag({ content: ".grain{display:none!important}" });
+  await intro.getByRole("button", { name: /Try it yourself/ }).waitFor({ timeout: 60000 });
+  await wait(1200);
+  await intro.screenshot({ path: "docs/media/studio-intro.png" });
+  // The guided demo's guardrail step: the template stamps a long headline REFUSED.
+  await intro.getByRole("button", { name: /Watch a 30s round trip/ }).click();
+  await intro.getByText(/the template refuses it/i).first().waitFor({ timeout: 30000 });
+  await wait(700);
+  await intro.screenshot({ path: "docs/media/studio-refused.png" });
+  await first.close();
+}
+
 // ---- studio, recorded with Chrome's screencast ----
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
 await context.route(ART, localArt);
+// A returning visitor: no intro over the recording.
+await context.addInitScript(() => localStorage.setItem("rt.guide.seen", "1"));
 const page = await context.newPage();
 rmSync("docs/media/raw", { recursive: true, force: true });
 mkdirSync("docs/media/raw", { recursive: true });
@@ -80,8 +100,6 @@ await cdp.send("Page.startScreencast", { format: "jpeg", quality: 85, maxWidth: 
 const builder = page.frameLocator("#rt-builder iframe");
 await builder.getByText("Dashboards that build themselves").first().waitFor({ timeout: 30000 });
 await wait(2500);
-await page.getByRole("button", { name: "Got it" }).click();
-await wait(600);
 
 // Marketer: retype a word in the headline.
 // The builder draws a selection layer over its blocks, so click like a person.

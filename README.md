@@ -27,6 +27,11 @@
 </p>
 
 <p align="center">
+  <a href="https://franksignorini.github.io/hyper-elements-round-trip/#film"><img src="docs/media/film.jpg" alt="Watch the 30-second film: your email's code and builder disagree, and Round Trip makes them agree" width="100%" /></a>
+  <br/><sub><a href="https://franksignorini.github.io/hyper-elements-round-trip/#film">▶ Watch the 30-second film</a> (sound on) · or <a href="public/film/round-trip.mp4">download the MP4</a></sub>
+</p>
+
+<p align="center">
   <img src="docs/media/round-trip.gif" alt="A headline is retyped in the Unlayer builder; seconds later issue.values.json changes on the left and a one-line diff appears. Then a title is edited in code and the builder follows. Then the change request opens with the email before and after." width="100%" />
 </p>
 
@@ -60,6 +65,15 @@ Hyper Elements already ships both halves of a fix: `toDesign()` turns a template
 ## What you can do with it
 
 <table>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/media/studio-intro.png" alt="The studio's intro: One email. Two editors. Engineer, Marketer and Round Trip, each lighting the panel it names, while Unlayer's builder loads" />
+    </td>
+    <td width="50%" valign="top">
+      <h4>◎ Get it in twenty seconds</h4>
+      A first visit opens on an intro that plays while Unlayer's builder loads: three lines, each lighting the panel it names. Then a four-step tour that ticks itself off as you do the round trip yourself, and every edit sends the word itself flying to the line it landed on.
+    </td>
+  </tr>
   <tr>
     <td width="50%" valign="top">
       <h4>⇄ Edit on either side</h4>
@@ -102,7 +116,7 @@ Hyper Elements already ships both halves of a fix: `toDesign()` turns a template
       An edit that can't land in source is <b>held back with a reason</b>, never written with a wrong value. That covers the <code>01</code> that code numbers, a deleted block, a locked stamp, and <b>anything the template refuses</b>: a 70-character headline in the builder comes back as <i>"The template refuses it: Headline: is longer than 48 characters."</i> One click puts the builder back. A broken edit in code names its file and line, and the builder keeps the last good design.
     </td>
     <td valign="top">
-      <img src="docs/media/studio-error.png" alt="A missing comma in issue.values.json: the studio says the JSON isn't valid, names the lines, with a Go to line button" />
+      <img src="docs/media/studio-refused.png" alt="A headline too long for the template: a REFUSED stamp lands on the builder, Headline · max 48, and the code is left as it was" />
     </td>
   </tr>
   <tr>
@@ -116,7 +130,7 @@ Hyper Elements already ships both halves of a fix: `toDesign()` turns a template
   </tr>
 </table>
 
-Press **▶ Watch a round trip** in the studio for a 30-second guided run through the real pipeline, with captions.
+**First time in the studio?** A 20-second intro plays while Unlayer's builder loads, then a four-step tour ticks itself off as you work: change a word (it lands on its line), make the headline too long (the template stamps it **REFUSED**), edit a title in code (the builder follows), open the change request. Every trip shows the edited word itself flying to the line it landed on. Or press **▶ Watch a round trip** for a 30-second guided run through the real pipeline, with captions. On a phone, the studio shows the film instead.
 
 ## How it works
 
@@ -191,18 +205,33 @@ Then try it:
 
 The art is served from the deployed site (`ASSETS` in `template/theme.ts`), so the builder shows it on `localhost` too.
 
+## Use it on your own template
+
+Round Trip isn't tied to the newsletter. Any Hyper Elements `template()` with a values file works, and [`examples/welcome/`](examples/welcome) is a second, unrelated one to copy from:
+
+1. **Write your template** with `template()`: the copy a marketer should own as typed `fields`, everything else in `render`. Loops, conditions and custom elements are fine.
+2. **Keep its copy in a values file** (`hyper-elements design new` writes one). It names its template, so that's the only path Round Trip needs:
+   ```json
+   { "version": 1, "template": { "module": "./Welcome.tsx", "id": "examples.Welcome", "version": "1.0.0" }, "values": { … } }
+   ```
+3. **Push it to the builder:** `npm run push -- examples/welcome/welcome.values.json` writes `out/welcome.design.json`. Load it in any Unlayer editor (`editor.loadDesign()`), and let your marketer edit it.
+4. **Pull the edits back:** export the design (`editor.saveDesign()`) and run `npm run pull -- edited.design.json examples/welcome/welcome.values.json`. Each edit becomes a one-line patch to the values file, or to a literal in the template. Anything your template's `check()` refuses is held back with its reason, and the email clients are re-checked.
+
+What it needs from a template: copy that arrives as field values, which is what `template()` asks for anyway. What stays code-owned: anything the builder has no tool for (a `Layer`, your own `defineElement()`), which `toDesign()`'s report names and Round Trip locks.
+
 <details>
-<summary><b>Headless: the round trip from the shell</b></summary>
+<summary><b>Headless: every command</b></summary>
 
 ```bash
-npm run push                            # template/ → out/design.json, plus the locked-zone report and client checks
-npm run pull -- edited.design.json      # an edited design → patches template/, prints the receipt, re-checks clients
-npm run check                           # hyper-elements check on the template and its values file
-npm run selftest                        # the round trip's invariants, headless: determinism, ids, one-line diffs, guardrails
-npm run art                             # redraw the illustrations with Canvas + renderImage()
+npm run push [-- my.values.json]                        # template → out/<name>.design.json, the locked-zone report, client checks
+npm run pull -- edited.design.json [my.values.json]     # an edited design → patches, checked by the template, then clients
+npm run check                                           # hyper-elements check: both templates and their values files
+npm run selftest                                        # the round trip's invariants: determinism, ids, one-line diffs, guardrails
+npm run bake:clients                                    # the email-client verdicts and previews the static site shows
+npm run art                                             # redraw the illustrations with Canvas + renderImage()
 ```
 
-`npm run pull -- out/design.json` reverses a push, so a design exported from any Unlayer integration can round-trip.
+Without a values file, both commands use the Kestrel newsletter. `npm run pull -- out/design.json` reverses a push, so a design exported from any Unlayer integration can round-trip.
 
 </details>
 
@@ -211,7 +240,7 @@ npm run art                             # redraw the illustrations with Canvas +
 
 **GitHub Pages (this repo).** `.github/workflows/pages.yml` runs typecheck, lint, `hyper-elements check` and the full build on every push and pull request. On `main` it then publishes a static export to Pages. One-time setup: *Settings → Pages → Source: GitHub Actions*.
 
-Pages serves static files only, so the live demo runs `render()` and `validate()` in your browser. The per-client emulator (`emailClients()`, `renderInEmailClients()`) needs Node, and the studio says so where its stamps would be. To get everything, run it locally or on a Node host:
+Pages serves static files only, so the live demo runs `render()` and `validate()` in your browser, and the per-client emulator (`emailClients()`, `renderInEmailClients()`), which needs Node, runs once at build time on the committed template (`npm run bake:clients`): the studio's nine stamps and previews are real, and once you edit the template it says they're for the committed one. To emulate every edit, run it locally or on a Node host:
 
 ```bash
 npm run build && npm start
@@ -226,6 +255,8 @@ There, `/` and `/studio` are static, `/api/clients` runs the emulator on Node (i
 
 ```
 template/            the template: Newsletter.tsx (template()), issue.values.json (its values file), theme.ts
+examples/welcome/    a second template, to show any template() with a values file round-trips
+public/film/         the 30-second film and its poster
 src/lib/rt/          the round-trip engine
   compile.ts         Sucrase + a tiny require(): template files → a live template(), in the browser
   bind.ts            sentinel render, patterns, path helpers
@@ -233,12 +264,13 @@ src/lib/rt/          the round-trip engine
   engine.ts          build() and pull()
   jsonText.ts        format-preserving JSON patch (one-line diffs) and value lookup
   ownership.ts       copy / code text / locked / fixed, with field labels from describe()
-  checks.ts          render + validate in the browser, emulator via /api/clients
+  checks.ts          render + validate in the browser, emulator via /api/clients (or the build's report on Pages)
   spot.ts            "Spot the difference": a word-level diff of two renders
   errors.ts          build errors → file, line and a sentence
-src/components/      studio (Builder, CodePanel, DiffView, ClientStamps, ReviewModal) and landing
+src/components/      studio (Builder, CodePanel, DiffView, ClientStamps, ReviewModal, Guide, PhoneStudio) and landing (Film…)
 src/app/api/         clients (emulator) and template (dev-only disk sync)
-scripts/             roundtrip.tsx (CLI), selftest.tsx, art.tsx (Canvas art), capture.mjs (README media), dev.mjs
+scripts/             roundtrip.tsx (CLI, any template), selftest.tsx, bake-clients.tsx (static-site client checks),
+                     art.tsx (Canvas art), capture.mjs (README media), dev.mjs
 .github/workflows/   pages.yml: checks on every push, GitHub Pages deploy from main
 ```
 
@@ -250,7 +282,8 @@ scripts/             roundtrip.tsx (CLI), selftest.tsx, art.tsx (Canvas art), ca
 - Structural edits (new or deleted blocks) aren't merged into the JSX. They're reported, and the `fromDesign()` tab shows them as code to copy.
 - An image swapped in the builder keeps its declared size (`width`, `height`) in the values file, so the template checks it against the old size until someone runs `hyper-elements design set … @path`, which reads the new file's size.
 - Template checks with the full plugin run on the server only when the studio's JSX matches the committed template, because the server never runs code it is sent. HTML-level client checks always run.
-- The live demo on GitHub Pages has no Node server, so the client emulator runs only locally or on a Node host.
+- The live demo on GitHub Pages has no Node server: its client stamps and previews are the committed template's, checked when the site was built. Your edits there are checked by `validate()` in the browser; the emulator re-checks every trip locally or on a Node host.
+- The studio's in-browser editor runs the Kestrel newsletter; other templates round-trip through the CLI.
 
 ## License
 
