@@ -401,39 +401,352 @@
   0%, 100% { transform: translateY(0); }
   40% { transform: translateY(-12px); }
 }
-.coach {
+/* ---------- intro: plays while the builder loads ---------- */
+.introBack {
+  position: fixed;
+  inset: 58px 0 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(227, 232, 242, 0.55);
+  backdrop-filter: blur(2px);
+  pointer-events: none;
+}
+.intro {
+  pointer-events: auto;
+  width: min(620px, 100%);
+  padding: 28px 30px 26px;
+  background: var(--paper-2);
+  border: 1.5px solid var(--ink);
+  border-radius: 18px;
+  box-shadow: 9px 9px 0 var(--orange), -6px -6px 0 var(--blue);
+}
+.introKicker {
+  margin: 0 0 6px;
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.introTitle {
+  margin: 0 0 18px;
+  font-size: clamp(30px, 4vw, 44px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variation-settings: "wdth" 80;
+}
+.introTitle [data-tone="blue"] { color: var(--blue); }
+.introTitle [data-tone="orange"] { color: var(--orange); }
+.introBeats {
+  margin: 0 0 22px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+.introBeats li {
+  position: relative;
+  padding: 10px 14px 10px 16px;
+  border-radius: 12px;
+  font-size: 16px;
+  line-height: 1.4;
+  border-left: 5px solid var(--tone, var(--ink));
+  background: transparent;
+  transition: background 0.4s var(--ease-out);
+}
+.introBeats li[data-tone="blue"] { --tone: var(--blue); }
+.introBeats li[data-tone="orange"] { --tone: var(--orange); }
+.introBeats li[data-tone="over"] { --tone: var(--over); }
+.introBeats li[data-on] { background: var(--paper); }
+.introBeats b {
+  color: var(--tone);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 13px;
+  margin-right: 4px;
+}
+.introActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.introTry,
+.introWatch {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 999px;
+  padding: 13px 20px;
+  font-size: 16px;
+  font-weight: 700;
+  transition: transform 0.25s var(--ease-out), box-shadow 0.25s var(--ease-out), opacity 0.25s;
+}
+.introTry {
+  border: 0;
+  background: var(--ink);
+  color: var(--paper-2);
+  box-shadow: 4px 4px 0 var(--orange);
+}
+.introTry i {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--orange);
+  font-style: normal;
+}
+.introWatch {
+  border: 1.5px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+}
+.introWatch i { font-style: normal; color: var(--orange); }
+.introTry:not(:disabled):hover,
+.introWatch:not(:disabled):hover {
+  transform: translate(-2px, -2px);
+}
+.introTry:disabled,
+.introWatch:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+/* ---------- phone: the studio needs two panes, so a phone gets the film instead ---------- */
+.phone {
+  min-height: 100vh;
+  padding: 0 16px 40px;
+  background: var(--paper);
+  color: var(--ink);
+}
+.phoneTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 58px;
+}
+.phoneTag {
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.phoneCard {
+  padding: 22px 18px 18px;
+  background: var(--paper-2);
+  border: 1.5px solid var(--ink);
+  border-radius: 16px;
+  box-shadow: 7px 7px 0 var(--orange), -4px -4px 0 var(--blue);
+}
+.phoneCard h1 {
+  margin: 0 0 10px;
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variation-settings: "wdth" 80;
+}
+.phoneCard h1 [data-tone="blue"] { color: var(--blue); }
+.phoneCard h1 [data-tone="orange"] { color: var(--orange); }
+.phoneCard p {
+  margin: 0 0 14px;
+  font-size: 15px;
+  line-height: 1.45;
+}
+.phoneCard video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+  background: #000;
+}
+.phoneBeats {
+  margin: 26px 0 22px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+.phoneBeats li {
+  padding: 10px 12px 10px 14px;
+  border-left: 5px solid var(--tone, var(--ink));
+  font-size: 15px;
+  line-height: 1.4;
+}
+.phoneBeats li[data-tone="blue"] { --tone: var(--blue); }
+.phoneBeats li[data-tone="orange"] { --tone: var(--orange); }
+.phoneBeats li[data-tone="over"] { --tone: var(--over); }
+.phoneBeats b {
+  color: var(--tone);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+  margin-right: 4px;
+}
+.phoneActions {
+  display: grid;
+  gap: 12px;
+}
+.phoneActions > * {
+  justify-content: center;
+  text-decoration: none;
+}
+
+/* ---------- the REFUSED stamp: the template's guardrail, on the builder ---------- */
+.stampWrap {
   position: absolute;
-  left: 24px;
-  bottom: 24px;
-  width: 300px;
-  padding: 16px 18px 14px;
+  inset: 0;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  /* Centered on the email, clear of Unlayer's tool column on the right. */
+  padding-right: min(352px, 30%);
+  pointer-events: none;
+  animation: stampWash 0.9s var(--ease-out) both;
+}
+@keyframes stampWash {
+  0% { background: rgba(255, 90, 44, 0.32); }
+  100% { background: rgba(255, 90, 44, 0.06); }
+}
+.refused {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 18px 34px 16px;
+  color: #c0260a;
+  border: 5px double #c0260a;
+  border-radius: 14px;
+  background: var(--paper-2);
+  box-shadow: 0 0 0 4px var(--paper-2), 8px 8px 0 4px var(--ink);
+  text-align: center;
+}
+.refused b {
+  font-size: clamp(44px, 6vw, 76px);
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-variation-settings: "wdth" 75;
+}
+.refused span {
+  font-family: var(--font-mono), monospace;
+  font-size: 15px;
+  font-weight: 700;
+}
+.refused small {
+  font-family: var(--font-mono), monospace;
+  font-size: 13px;
+}
+.refused em {
+  margin-top: 4px;
+  font-style: normal;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+@media (prefers-reduced-motion: reduce) {
+  .stampWrap { animation: none; }
+}
+
+/* ---------- tour: a sticky note that ticks itself off ---------- */
+.tour {
+  /* Over the builder's tool column, clear of the email the steps ask you to edit. */
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  width: 320px;
+  max-width: calc(100% - 32px);
+  padding: 14px 16px 12px;
   background: #fff6a8;
   color: var(--ink);
   border: 1.5px solid var(--ink);
   box-shadow: 5px 5px 0 var(--ink);
   font-size: 13px;
-  line-height: 1.45;
+  line-height: 1.4;
   z-index: 3;
 }
-.coach b {
+.tour header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.tour header b {
   font-size: 12px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
-.coach ol {
-  margin: 8px 0 10px;
-  padding-left: 18px;
-  display: grid;
-  gap: 6px;
-}
-.coach button {
+.tour header button {
   border: 0;
-  background: var(--ink);
-  color: var(--paper-2);
-  border-radius: 999px;
-  padding: 5px 12px;
+  background: transparent;
+  color: var(--ink);
   font-size: 12px;
   font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.tour ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 7px;
+}
+.tour li {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 8px;
+  align-items: start;
+  transition: opacity 0.3s;
+}
+.tour li[data-state="next"] { opacity: 0.45; }
+.tour li[data-state="done"] { opacity: 0.6; text-decoration: line-through; text-decoration-color: rgba(29, 27, 23, 0.4); }
+.tour li[data-state="now"] { font-weight: 700; }
+.tourMark {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ink);
+  font-size: 11px;
+  font-weight: 800;
+}
+.tour li[data-state="now"] .tourMark {
+  background: var(--ink);
+  color: #fff6a8;
+  animation: tourPulse 1.6s var(--ease-out) infinite;
+}
+.tour li[data-state="done"] .tourMark {
+  border-color: #1f7a45;
+  color: #1f7a45;
+}
+.tourMark i { font-style: normal; display: block; }
+@keyframes tourPulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 90, 44, 0.7); }
+  70%, 100% { box-shadow: 0 0 0 9px rgba(255, 90, 44, 0); }
+}
+.tourNote {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  background: var(--ink);
+  color: #fff6a8;
+  border-radius: 8px;
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+}
+/* The tour's last step points at the Review button. */
+.reviewButton[data-pulse] {
+  animation: tourPulse 1.6s var(--ease-out) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tour li[data-state="now"] .tourMark,
+  .reviewButton[data-pulse] { animation: none; }
 }
 
 /* flying slips */
@@ -474,6 +787,55 @@
 }
 .slip[data-dir="left"] {
   border-left: 6px solid var(--orange);
+}
+
+/* The edited word itself, in flight between the builder and its line. */
+.wordSlip {
+  position: absolute;
+  translate: -50% -50%;
+  z-index: 2;
+}
+.wordSlip > div {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  padding: 10px 18px 8px;
+  border: 1.5px solid var(--ink);
+  border-radius: 10px;
+  background: var(--paper-2);
+  white-space: nowrap;
+}
+.wordSlip[data-dir="left"] > div {
+  box-shadow: 6px 6px 0 var(--orange);
+}
+.wordSlip[data-dir="right"] > div {
+  box-shadow: 6px 6px 0 var(--blue);
+}
+.wordSlip b {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 34px;
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+}
+.wordSlip[data-dir="left"] b { color: #c2410c; }
+.wordSlip[data-dir="right"] b { color: var(--blue); }
+.wordSlip span {
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.splash {
+  position: absolute;
+  width: 90px;
+  height: 90px;
+  margin: -45px 0 0 -45px;
+  border-radius: 50%;
+  border: 4px solid var(--orange);
+}
+.splash[data-dir="right"] {
+  border-color: var(--blue);
 }
 
 /* ---------- dock ---------- */

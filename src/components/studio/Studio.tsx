@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import { diffLines } from "diff";
@@ -16,6 +16,8 @@ import { CodePanel, type Flash } from "./CodePanel";
 import { DiffView } from "./DiffView";
 import { ClientStamps } from "./ClientStamps";
 import { ReviewModal } from "./ReviewModal";
+import { Intro, Tour, tourFocus, type Focus, type TourState } from "./Guide";
+import { PhoneStudio } from "./PhoneStudio";
 import { jsonValueLine, patchJsonValue } from "@/lib/rt/jsonText";
 import { locateError, type BuildError } from "@/lib/rt/errors";
 import styles from "./studio.module.css";
@@ -43,6 +45,34 @@ interface Flight {
   id: number;
   dir: "right" | "left";
   label: string;
+  /** Light the wire only: a word flight is telling this trip. */
+  quiet?: boolean;
+}
+interface Point {
+  x: number;
+  y: number;
+}
+/** The edited word itself, flying from where it was typed to where it landed. */
+interface WordFlight {
+  id: number;
+  dir: "right" | "left";
+  word: string;
+  caption: string;
+  from: Point;
+  to: Point;
+}
+
+/** The words that changed between two texts: "build" for "…that build them" → "…that draw them". */
+function changedWords(before: string, after: string): string | null {
+  const a = before.split(/\s+/);
+  const b = after.split(/\s+/);
+  let start = 0;
+  while (start < a.length && start < b.length && a[start] === b[start]) start++;
+  let end = 0;
+  while (end < a.length - start && end < b.length - start && a[a.length - 1 - end] === b[b.length - 1 - end]) end++;
+  const words = b.slice(start, b.length - end).join(" ").trim();
+  if (!words) return null;
+  return words.length > 34 ? `${words.slice(0, 32)}…` : words;
 }
 
 // The template as it was when this page opened. Kept on globalThis so that, with
@@ -52,6 +82,42 @@ const HEAD: Record<string, string> = ((globalThis as { __rtHead?: Record<string,
 });
 const OWNERS = { "Newsletter.tsx": "engineer", "theme.ts": "engineer", "issue.values.json": "shared" } as const;
 type DockTab = "receipts" | "diff" | "ownership" | "clients" | "flat";
+
+const DEMO_STEPS = 10;
+
+// Two editors side by side need a wide screen: a phone gets PhoneStudio instead.
+const PHONE = "(max-width: 760px)";
+const subscribePhone = (onChange: () => void) => {
+  const query = window.matchMedia(PHONE);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+};
+const phoneNow = () => window.matchMedia(PHONE).matches;
+
+/** "The template refuses it: Headline: is longer than 48 characters." → the stamp's two lines. */
+function stampFor(reason: string, wrote: string): { rule: string; wrote: string } {
+  const message = reason.replace(/^The template refuses it:\s*/, "").replace(/\.$/, "");
+  const limit = /^(.+?): is longer than (\d+) characters$/.exec(message);
+  if (limit) return { rule: `${limit[1]} · max ${limit[2]}`, wrote: `you wrote ${wrote.length}` };
+  return { rule: message, wrote: "" };
+}
+
+// The intro shows once per browser; storage can be blocked, so never let it throw.
+const GUIDE_KEY = "rt.guide.seen";
+const guideSeen = () => {
+  try {
+    return window.localStorage.getItem(GUIDE_KEY) === "1";
+  } catch {
+    return false;
+  }
+};
+const markGuideSeen = () => {
+  try {
+    window.localStorage.setItem(GUIDE_KEY, "1");
+  } catch {
+    // private window: the intro shows again next time, which is fine
+  }
+};
 
 const now = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
@@ -87,7 +153,8 @@ function describe(change: Change): ReceiptLine {
 
 export default function Studio() {
   const [files, setFiles] = useState<Record<string, string>>(HEAD);
-  const [active, setActive] = useState<string>(ENTRY);
+  // Open on the copy, where edits land, not on the imports.
+  const [active, setActive] = useState<string>(DATA);
   // The first build happens here, before the first paint (this component never renders on the server).
   const [initial] = useState(() => {
     try {
@@ -102,6 +169,8 @@ export default function Studio() {
   const [builderError, setBuilderError] = useState<string | null>(null);
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [flights, setFlights] = useState<Flight[]>([]);
+  const [words, setWords] = useState<WordFlight[]>([]);
+  const stageRef = useRef<HTMLElement>(null);
   const [flash, setFlash] = useState<Flash | null>(null);
   const [checks, setChecks] = useState<CheckResult | null>(null);
   const [checking, setChecking] = useState(false);
@@ -111,7 +180,10 @@ export default function Studio() {
   const [tab, setTab] = useState<DockTab>("receipts");
   const [dockOpen, setDockOpen] = useState(true);
   const [trips, setTrips] = useState({ push: 0, pull: 0 });
-  const [coach, setCoach] = useState(true);
+  const [introOpen, setIntroOpen] = useState(() => !guideSeen());
+  const [guideFocus, setGuideFocus] = useState<Focus>(null);
+  const [tour, setTour] = useState<TourState | null>(null);
+  const [stamp, setStamp] = useState<{ id: number; rule: string; wrote: string } | null>(null);
   const [disk, setDisk] = useState<{ enabled: boolean; on: boolean }>({ enabled: false, on: false });
   // "main": what the change request diffs against. Moves forward on merge.
   const [head, setHead] = useState<Record<string, string>>(HEAD);
@@ -137,10 +209,41 @@ export default function Studio() {
     setReceipts((list) => [{ ...r, id: ++ids.current, time: now() }, ...list].slice(0, 40));
   }, []);
 
-  const fly = useCallback((dir: Flight["dir"], label: string) => {
+  const fly = useCallback((dir: Flight["dir"], label: string, quiet = false) => {
     const id = ++ids.current;
-    setFlights((f) => [...f, { id, dir, label }]);
+    setFlights((f) => [...f, { id, dir, label, quiet }]);
     setTimeout(() => setFlights((f) => f.filter((x) => x.id !== id)), 1500);
+  }, []);
+
+  /**
+   * Flies a word between the builder and a line of the code panel. Measured a frame
+   * later, once the code panel has scrolled that line into view.
+   */
+  const flyWord = useCallback((dir: WordFlight["dir"], word: string, caption: string, line?: number) => {
+    setTimeout(() => {
+      const stage = stageRef.current;
+      if (!stage) return;
+      const s = stage.getBoundingClientRect();
+      const frame = stage.querySelector(`.${styles.builderFrame}`)?.getBoundingClientRect();
+      const builderPt = frame
+        ? { x: frame.left - s.left + frame.width * 0.36, y: frame.top - s.top + frame.height * 0.42 }
+        : { x: s.width * 0.7, y: s.height * 0.45 };
+      const gutter =
+        line === undefined
+          ? undefined
+          : [...stage.querySelectorAll(".cm-gutterElement")].find((g) => g.textContent?.trim() === String(line));
+      const editor = stage.querySelector(".cm-editor")?.getBoundingClientRect();
+      const r = gutter?.getBoundingClientRect();
+      const codePt = r
+        ? { x: r.right - s.left + 120, y: r.top - s.top + r.height / 2 }
+        : editor
+          ? { x: editor.left - s.left + editor.width / 2, y: editor.top - s.top + editor.height / 2 }
+          : { x: s.width * 0.15, y: s.height * 0.45 };
+      const [from, to] = dir === "left" ? [builderPt, codePt] : [codePt, builderPt];
+      const id = ++ids.current;
+      setWords((w) => [...w, { id, dir, word, caption, from, to }]);
+      setTimeout(() => setWords((w) => w.filter((x) => x.id !== id)), 1900);
+    }, 90);
   }, []);
 
   const check = useCallback(async (snap: Snapshot) => {
@@ -181,13 +284,16 @@ export default function Studio() {
       setEdited(null);
       builder.current?.load(snap.design);
       const lines: ReceiptLine[] = [];
+      let flown: string | null = null;
       if (before) {
         const old = new Map(before.blocks.map((b) => [b.id, b]));
         for (const b of snap.blocks) {
           const o = old.get(b.id);
           if (!o) lines.push({ tone: "structure", text: `New ${b.type} block`, detail: blockLabel(b) });
-          else if (JSON.stringify(o.fields) !== JSON.stringify(b.fields) && b.type !== "html")
+          else if (JSON.stringify(o.fields) !== JSON.stringify(b.fields) && b.type !== "html") {
             lines.push({ tone: "code", text: `${b.type} · ${b.id.replace("u_content_", "")}`, detail: blockLabel(b) });
+            flown ??= changedWords(o.fields.text ?? "", b.fields.text ?? "");
+          }
         }
         if (snap.blocks.length < before.blocks.length)
           lines.push({ tone: "structure", text: `${before.blocks.length - snap.blocks.length} block(s) removed` });
@@ -197,12 +303,22 @@ export default function Studio() {
       heldKey.current = "[]";
       if (!lines.length) lines.push({ tone: "info", text: "Same design, re-sent", detail: note });
       const ms = Math.round(performance.now() - t0);
-      fly("right", `design.json · ${snap.blocks.length} blocks`);
+      // A code edit: the edited word flies from its line into the builder.
+      const typed = who === "engineer" && note === undefined && before && flown;
+      if (typed) {
+        const file = [DATA, ENTRY].find((f) => before.files[f] !== next[f]) ?? DATA;
+        const line = changedLines(before.files[file], next[file])[0];
+        flyWord("right", flown!, "toDesign() → builder", line);
+      }
+      fly("right", `design.json · ${snap.blocks.length} blocks`, Boolean(typed));
       setTrips((t) => ({ ...t, push: t.push + 1 }));
       addReceipt({ who, title: note ?? "Code → builder", ms, lines });
+      // A code edit typed in the studio: the tour's third step.
+      if (who === "engineer" && note === undefined)
+        setTour((t) => (t && t.step === 2 ? { step: 3, note: "toDesign() sent your code edit straight into the builder." } : t));
       void check(snap);
     },
-    [addReceipt, check, fly, held.length],
+    [addReceipt, check, fly, flyWord, held.length],
   );
 
   // First checks, on the first build.
@@ -269,7 +385,6 @@ export default function Studio() {
     (design: Design) => {
       const snap = snapRef.current;
       if (!snap) return;
-      setCoach(false);
       setEdited(design);
       const t0 = performance.now();
       const result = pull(snap, design);
@@ -283,6 +398,16 @@ export default function Studio() {
       }
       heldKey.current = pendingKey;
       setHeld(pending);
+      // A newly refused edit: stamp it on the builder, and tick the tour's second step.
+      const refusal = fresh.find(
+        (c): c is Extract<Change, { kind: "conflict" }> => c.kind === "conflict" && /template refuses/.test(c.reason),
+      );
+      if (refusal) {
+        const id = ++ids.current;
+        setStamp({ id, ...stampFor(refusal.reason, refusal.after) });
+        setTimeout(() => setStamp((s) => (s?.id === id ? null : s)), 3000);
+        setTour((t) => (t && t.step === 1 ? { step: 2, note: refusal.reason } : t));
+      }
       if (!result.applied) return;
 
       const before = filesRef.current;
@@ -305,8 +430,19 @@ export default function Studio() {
         setActive(target);
         setFlash({ file: target, lines: changedLines(before[target], next[target]), key: ++ids.current });
       }
+      if (target === DATA && result.changes.some((c) => c.kind === "copy")) {
+        const line = changedLines(before[DATA], next[DATA])[0];
+        setTour((t) => (t && t.step === 0 ? { step: 1, note: `Landed on ${DATA}, line ${line}. One line, nothing else.` } : t));
+      }
       const ms = Math.round(performance.now() - t0);
-      fly("left", touched.map((f) => `${f} +${changedLines(before[f], next[f]).length}`).join(" · "));
+      // The edited word flies from the builder to the line it landed on.
+      const landed = result.changes.find((c): c is Extract<Change, { kind: "copy" | "code" }> => c.kind === "copy" || c.kind === "code");
+      const word = landed ? (changedWords(landed.before, landed.after) ?? landed.after) : null;
+      if (target && word) {
+        const line = changedLines(before[target], next[target])[0];
+        flyWord("left", word, `${target}:${line}`, line);
+      }
+      fly("left", touched.map((f) => `${f} +${changedLines(before[f], next[f]).length}`).join(" · "), Boolean(target && word));
       setTrips((t) => ({ ...t, pull: t.pull + 1 }));
       addReceipt({
         who: "marketer",
@@ -317,8 +453,14 @@ export default function Studio() {
       void writeDisk(next);
       void check(snapNext);
     },
-    [addReceipt, check, fly, writeDisk],
+    [addReceipt, check, fly, flyWord, writeDisk],
   );
+
+  /** Opens the change request: also the tour's last step. */
+  const openReview = () => {
+    setReviewOpen(true);
+    setTour((t) => (t && t.step === 3 ? { step: 4, note: "That’s the round trip: builder → code → builder, as a pull request." } : t));
+  };
 
   useEffect(() => {
     onBuilderEditRef.current = onBuilderEdit;
@@ -396,7 +538,8 @@ export default function Studio() {
       await sleep(ms);
     };
     try {
-      setCoach(false);
+      setIntroOpen(false);
+      setTour(null);
       setTab("receipts");
       setDockOpen(true);
       await go(1, "builder", "The marketer opens the newsletter in Unlayer’s builder…", 1800);
@@ -419,8 +562,23 @@ export default function Studio() {
       await go(3, "code", "Round Trip traced the word to the template’s values file, checked it, and patched that one line.", 2600);
       setTab("diff");
       await go(4, "dock", "The git diff: one line. The loops in Newsletter.tsx are untouched.", 3000);
+      // The guardrail: the template refuses a headline over its limit, and the code stays put.
+      const longer = structuredClone(next);
+      for (const row of longer.body.rows as { columns: { contents: { values: Record<string, unknown> }[] }[] }[])
+        for (const col of row.columns)
+          for (const c of col.contents)
+            if ((c.values._meta as { htmlID?: string } | undefined)?.htmlID === "u_content_heading_1")
+              for (const key of ["text", "textJson"])
+                if (typeof c.values[key] === "string")
+                  c.values[key] = (c.values[key] as string).replace("themselves", "themselves and write your release notes too");
+      await go(5, "builder", "The marketer tries a much longer headline…", 1300);
+      setTab("receipts");
+      builder.current?.load(longer);
+      onBuilderEditRef.current(longer);
+      await go(6, "builder", "…and the template refuses it: a Headline is 48 characters at most. The code stays as it was.", 3200);
+      push(filesRef.current, "engineer", "Builder put back to match the code");
       setActive(DATA);
-      await go(5, "code", "Now the engineer renames a feature, in code…", 1200);
+      await go(7, "code", "Now the engineer renames a feature, in code…", 1200);
       // Types " 2.0" onto the first feature, or backspaces it away on a second run,
       // so every run shows a real code edit reaching the builder.
       const issue = JSON.parse(filesRef.current[DATA]) as { values: { features: { title: string }[] } };
@@ -437,12 +595,12 @@ export default function Studio() {
         if (text) onCodeChange(DATA, text);
         await sleep(200);
       }
-      await go(6, "builder", "…and toDesign() puts it straight into the builder.", 2600);
+      await go(8, "builder", "…and toDesign() puts it straight into the builder.", 2600);
       setTab("clients");
-      await go(7, "dock", "After every trip, nine email clients are re-checked by the emulator.", 3200);
-      await go(8, null, "Ship it like code: a change request with the email before and after.", 1400);
+      await go(9, "dock", "After every trip, nine email clients are re-checked by the emulator.", 3200);
+      await go(DEMO_STEPS, null, "Ship it like code: a change request with the email before and after.", 1400);
       setReviewOpen(true);
-      await go(8, null, "Approve and merge, or send it back. Your turn.", 3200);
+      await go(DEMO_STEPS, null, "Approve and merge, or send it back. Your turn.", 3200);
     } catch {
       // stopped
     } finally {
@@ -467,6 +625,10 @@ export default function Studio() {
   const dirty = useMemo(() => Object.fromEntries(Object.keys(files).map((f) => [f, files[f] !== head[f]])), [files, head]);
   const dirtyCount = Object.values(dirty).filter(Boolean).length;
   const passing = checks ? checks.clients.filter((c) => c.errors === 0).length : null;
+  // One focus ring for the demo, the intro and the tour, in that order.
+  const focus: Focus = director?.focus ?? (introOpen ? guideFocus : tourFocus(tour));
+  const phone = useSyncExternalStore(subscribePhone, phoneNow, () => false);
+  if (phone) return <PhoneStudio />;
 
   return (
     <div className={styles.studio}>
@@ -487,10 +649,18 @@ export default function Studio() {
               <span>Sync with disk</span>
             </label>
           )}
+          <button className={styles.ghostButton} onClick={() => setIntroOpen(true)} title="Replay the 20-second intro">
+            Guide
+          </button>
           <button className={styles.ghostButton} onClick={reset}>
             Reset
           </button>
-          <button className={styles.reviewButton} onClick={() => setReviewOpen(true)} disabled={!dirtyCount}>
+          <button
+            className={styles.reviewButton}
+            onClick={openReview}
+            disabled={!dirtyCount}
+            data-pulse={(tour?.step === 3 && dirtyCount > 0) || undefined}
+          >
             Review<span className={styles.more}> changes</span>
             {dirtyCount ? ` · ${dirtyCount}` : ""}
           </button>
@@ -516,7 +686,9 @@ export default function Studio() {
             exit={{ y: 20, opacity: 0 }}
             transition={{ type: "spring", stiffness: 300, damping: 26 }}
           >
-            <span className={styles.directorStep}>{director.step}/8</span>
+            <span className={styles.directorStep}>
+              {director.step}/{DEMO_STEPS}
+            </span>
             <AnimatePresence mode="wait">
               <motion.span
                 key={director.caption}
@@ -529,7 +701,7 @@ export default function Studio() {
               </motion.span>
             </AnimatePresence>
             <span className={styles.directorBar}>
-              <motion.i animate={{ width: `${(director.step / 8) * 100}%` }} />
+              <motion.i animate={{ width: `${(director.step / DEMO_STEPS) * 100}%` }} />
             </span>
           </motion.div>
         )}
@@ -545,7 +717,25 @@ export default function Studio() {
         onMerge={merge}
       />
 
-      <main className={styles.stage} data-focus={director?.focus ?? undefined}>
+      <Intro
+        open={introOpen}
+        ready={builderReady}
+        onFocus={setGuideFocus}
+        onTry={() => {
+          markGuideSeen();
+          setIntroOpen(false);
+          setGuideFocus(null);
+          setTour({ step: 0 });
+        }}
+        onWatch={() => {
+          markGuideSeen();
+          setIntroOpen(false);
+          setGuideFocus(null);
+          void playDemo();
+        }}
+      />
+
+      <main ref={stageRef} className={styles.stage} data-focus={focus ?? undefined}>
         <CodePanel
           files={files}
           active={active}
@@ -596,30 +786,36 @@ export default function Studio() {
               )}
             </AnimatePresence>
             <AnimatePresence>
-              {builderReady && coach && (
-                <motion.aside
-                  className={styles.coach}
-                  initial={{ opacity: 0, y: 20, rotate: -3 }}
-                  animate={{ opacity: 1, y: 0, rotate: -1.5 }}
-                  exit={{ opacity: 0, y: -10, scale: 0.9 }}
-                  transition={{ delay: 1.2, type: "spring", stiffness: 200, damping: 18 }}
+              {stamp && (
+                <motion.div
+                  key={stamp.id}
+                  className={styles.stampWrap}
+                  role="status"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0, transition: { duration: 0.4 } }}
                 >
-                  <b>Try it</b>
-                  <ol>
-                    <li>Click the headline “Dashboards that build themselves” and change a word.</li>
-                    <li>Watch issue.values.json on the left: that exact line changes.</li>
-                    <li>Edit a feature title in issue.values.json: the builder follows.</li>
-                  </ol>
-                  <button onClick={() => setCoach(false)}>Got it</button>
-                </motion.aside>
+                  <motion.div
+                    className={styles.refused}
+                    initial={{ scale: 2.6, rotate: -26, opacity: 0, y: -40 }}
+                    animate={{ scale: 1, rotate: -9, opacity: 1, y: 0 }}
+                    transition={{ type: "spring", stiffness: 520, damping: 17, mass: 0.9 }}
+                  >
+                    <b>Refused</b>
+                    <span>{stamp.rule}</span>
+                    {stamp.wrote && <small>{stamp.wrote}</small>}
+                    <em>kestrel.Newsletter · check()</em>
+                  </motion.div>
+                </motion.div>
               )}
             </AnimatePresence>
+            <Tour tour={builderReady && !director ? tour : null} onSkip={() => setTour(null)} />
           </div>
         </section>
 
         <div className={styles.flightLayer} aria-hidden>
           <AnimatePresence>
-            {flights.map((f) => (
+            {flights.filter((f) => !f.quiet).map((f) => (
               <motion.div
                 key={f.id}
                 className={styles.slip}
@@ -639,10 +835,44 @@ export default function Studio() {
               </motion.div>
             ))}
           </AnimatePresence>
+          {words.map((w) => {
+            const mid = { x: (w.from.x + w.to.x) / 2, y: Math.min(w.from.y, w.to.y) - 150 };
+            return (
+              <div key={w.id}>
+                <motion.div
+                  className={styles.wordSlip}
+                  data-dir={w.dir}
+                  style={{ left: 0, top: 0 }}
+                  initial={{ x: w.from.x, y: w.from.y, scale: 0.5, rotate: w.dir === "left" ? 10 : -10, opacity: 0 }}
+                  animate={{
+                    x: [w.from.x, mid.x, w.to.x],
+                    y: [w.from.y, mid.y, w.to.y],
+                    scale: [0.5, 1.2, 0.62],
+                    rotate: w.dir === "left" ? [10, -5, 0] : [-10, 5, 0],
+                    opacity: [0, 1, 1],
+                  }}
+                  transition={{ duration: 1.05, times: [0, 0.48, 1], ease: [0.45, 0, 0.2, 1] }}
+                >
+                  <motion.div animate={{ opacity: [1, 1, 0] }} transition={{ duration: 1.6, times: [0, 0.75, 1] }}>
+                    <b>{w.word}</b>
+                    <span>{w.caption}</span>
+                  </motion.div>
+                </motion.div>
+                <motion.span
+                  className={styles.splash}
+                  data-dir={w.dir}
+                  style={{ left: w.to.x, top: w.to.y }}
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: [0, 1, 1.7], opacity: [0, 0.9, 0] }}
+                  transition={{ delay: 0.95, duration: 0.7, times: [0, 0.3, 1] }}
+                />
+              </div>
+            );
+          })}
         </div>
       </main>
 
-      <motion.section className={styles.dock} data-focus={director?.focus === "dock" || undefined} animate={{ height: dockOpen ? "31vh" : 46 }} transition={{ type: "spring", stiffness: 260, damping: 30 }}>
+      <motion.section className={styles.dock} data-focus={focus === "dock" || undefined} animate={{ height: dockOpen ? "31vh" : 46 }} transition={{ type: "spring", stiffness: 260, damping: 30 }}>
         <nav className={styles.dockTabs}>
           {(
             [

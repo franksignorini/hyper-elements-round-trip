@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { motion, useMotionValue, useSpring, useTransform } from "motion/react";
 import { useEffect } from "react";
+import { Film } from "./Film";
 import { HeroProof } from "./HeroProof";
 import styles from "./landing.module.css";
 
@@ -128,6 +129,7 @@ export function Hero({ blocks, bound }: { blocks: number; bound: number }) {
               <span>Try it in the studio</span>
               <b aria-hidden>→</b>
             </Link>
+            <Film />
             <a href="#how" className={styles.textLink}>
               How it works
             </a>
