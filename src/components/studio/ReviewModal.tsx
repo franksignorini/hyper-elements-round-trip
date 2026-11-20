@@ -7,7 +7,7 @@
 import { useEffect, useRef, useState, type SyntheticEvent } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { render } from "@hyper-elements/react";
-import { build } from "@/lib/rt/engine";
+import { build, DATA, ValuesError } from "@/lib/rt/engine";
 import { spotChanges } from "@/lib/rt/spot";
 import { CLIENTS, type CheckResult } from "@/lib/rt/checks";
 import { DiffView, gitPatch } from "./DiffView";
@@ -19,21 +19,22 @@ interface Props {
   files: Record<string, string>;
   checks: CheckResult | null;
   authors: ("engineer" | "marketer")[];
-  assetBase: string;
   onClose(): void;
   onMerge(): void;
 }
 
 function title(head: Record<string, string>, files: Record<string, string>): string {
-  const json = head["issue.json"] !== files["issue.json"];
+  const json = head[DATA] !== files[DATA];
   const jsx = head["Newsletter.tsx"] !== files["Newsletter.tsx"] || head["theme.ts"] !== files["theme.ts"];
   if (json && jsx) return "Copy and template update · Kestrel Dispatch No. 14";
   if (jsx) return "Template update · Kestrel Dispatch No. 14";
   return "Copy update · Kestrel Dispatch No. 14";
 }
 
-export function ReviewModal({ open, head, files, checks, authors, assetBase, onClose, onMerge }: Props) {
+export function ReviewModal({ open, head, files, checks, authors, onClose, onMerge }: Props) {
   const [renders, setRenders] = useState<{ before: string; after: string } | null>(null);
+  // The template's own check on the values being merged: build() throws when it refuses them.
+  const [template, setTemplate] = useState<{ id: string; version: string; ok: boolean; message?: string } | null>(null);
   const [overlay, setOverlay] = useState(false);
   const [merged, setMerged] = useState(false);
   const [spotted, setSpotted] = useState<number | null>(null);
@@ -64,23 +65,28 @@ export function ReviewModal({ open, head, files, checks, authors, assetBase, onC
     let alive = true;
     (async () => {
       try {
-        const [before, after] = await Promise.all([render(build(head, assetBase).element), render(build(files, assetBase).element)]);
+        const next = build(files);
+        if (alive) setTemplate({ id: next.template.id, version: next.template.version, ok: true });
+        const [before, after] = await Promise.all([render(build(head).element), render(next.element)]);
         if (alive) setRenders({ before: before.html, after: after.html });
-      } catch {
-        if (alive) setRenders(null);
+      } catch (e) {
+        if (alive) {
+          setRenders(null);
+          if (e instanceof ValuesError) setTemplate({ id: "kestrel.Newsletter", version: "", ok: false, message: e.diagnostics[0]?.message });
+        }
       }
     })();
     return () => {
       alive = false;
     };
-  }, [open, head, files, assetBase]);
+  }, [open, head, files]);
 
   const changed = Object.keys(files).filter((f) => files[f] !== head[f]);
   // Checks only count when they ran on exactly these files.
   const fresh = Boolean(checks && Object.keys(files).every((f) => checks.ctx.files[f] === files[f]));
   const passing = checks ? checks.clients.filter((c) => c.errors === 0).length : 0;
   const validateErrors = checks ? checks.general.filter((d) => d.severity === "error").length : 0;
-  const codeChanged = changed.some((f) => f !== "issue.json");
+  const codeChanged = changed.some((f) => f !== DATA);
   const lines = gitPatch(head, files)
     .split("\n")
     .filter((l) => (l.startsWith("+") || l.startsWith("-")) && !l.startsWith("+++") && !l.startsWith("---")).length;
@@ -142,6 +148,11 @@ export function ReviewModal({ open, head, files, checks, authors, assetBase, onC
                     {validateErrors ? "✗" : "✓"} validate(): {validateErrors} error{validateErrors === 1 ? "" : "s"}
                   </span>
                 </>
+              )}
+              {template && (
+                <span data-ok={template.ok} title={template.message ?? "The template checked every value against its fields"}>
+                  {template.ok ? `✓ ${template.id} ${template.version} · check() valid` : `✗ ${template.id} refuses: ${template.message}`}
+                </span>
               )}
               <span data-ok={!codeChanged} title={codeChanged ? "Newsletter.tsx or theme.ts changed: read the JSX diff" : undefined}>
                 {codeChanged ? "! Template code changed: needs an engineer" : "✓ Copy only: loops and logic untouched"}

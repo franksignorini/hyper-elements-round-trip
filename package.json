@@ -9,7 +9,7 @@
     "lint": "eslint",
     "typecheck": "node scripts/embed-sources.mjs && next typegen && tsc --noEmit",
     "art": "tsx scripts/art.tsx",
-    "check": "hyper-elements check template/Newsletter.tsx",
+    "check": "hyper-elements check template/Newsletter.tsx template/issue.values.json",
     "push": "tsx scripts/roundtrip.tsx push",
     "pull": "tsx scripts/roundtrip.tsx pull",
     "selftest": "tsx scripts/selftest.tsx"
@@ -45,6 +45,9 @@
     "satori": "^0.33.5",
     "tsx": "^4.23.15",
     "typescript": "^5"
+  },
+  "hyperElements": {
+    "templates": ["template/**"]
   },
   "overrides": {
     "@hyper-elements/email-clients": "$@hyper-elements/email-clients"

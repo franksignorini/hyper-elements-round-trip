@@ -32,6 +32,8 @@ jobs:
       - run: npx eslint .
       # hyper-elements check: the template must stay at 0 errors, 0 warnings.
       - run: npm run check
+      # The round trip's invariants: deterministic design, stable ids, one-line diffs, template guardrails.
+      - run: npm run selftest
       # The full Node build, API routes and all, as a Node host would run it.
       - run: npm run build
 

@@ -4,7 +4,7 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { watch } from "node:fs";
 
-const files = ["Newsletter.tsx", "theme.ts", "issue.json"];
+const files = ["Newsletter.tsx", "theme.ts", "issue.values.json"];
 const OUT = "src/generated/sources.ts";
 
 async function embed() {

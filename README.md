@@ -63,7 +63,7 @@ Hyper Elements already ships both halves of a fix: `toDesign()` turns a template
   <tr>
     <td width="50%" valign="top">
       <h4>⇄ Edit on either side</h4>
-      Change copy in the builder and <code>issue.json</code> changes by one line. Change <code>issue.json</code> or the JSX in the studio, or in your own editor with <b>Sync with disk</b>, and the builder reloads. Text written in the JSX itself (<i>"On the runway"</i>) is patched in <code>Newsletter.tsx</code>.
+      Change copy in the builder and <code>issue.values.json</code> changes by one line. Change the values or the JSX in the studio, or in your own editor with <b>Sync with disk</b>, and the builder reloads. Text written in the JSX itself (<i>"On the runway"</i>) is patched in <code>Newsletter.tsx</code>.
     </td>
     <td width="50%" valign="top">
       <img src="docs/media/studio-push.png" alt="Studio: issue.json on the left, the Unlayer builder on the right, a receipt for each trip below" />
@@ -81,7 +81,7 @@ Hyper Elements already ships both halves of a fix: `toDesign()` turns a template
   <tr>
     <td valign="top">
       <h4>⌖ See who owns every block</h4>
-      The <b>Ownership map</b> sorts all 40 blocks into copy (from <code>issue.json</code>), code text (in the JSX), locked (a <code>Layer</code> and a custom <code>defineElement()</code> stamp the builder can't edit) and fixed. <b>Click a block</b> and the code panel jumps to the line it comes from.
+      The <b>Ownership map</b> sorts all 40 blocks into copy (the template's fields, each with its label and limit from <code>describe()</code>, like <i>Headline ≤48</i>), code text (in the JSX), locked (a <code>Layer</code> and a custom <code>defineElement()</code> stamp the builder can't edit) and fixed. <b>Click a block</b> and the code panel jumps to the line it comes from.
     </td>
     <td valign="top">
       <img src="docs/media/studio-jump.png" alt="Ownership map: clicking the Quiet alerts block highlights its title line in issue.json" />
@@ -99,7 +99,7 @@ Hyper Elements already ships both halves of a fix: `toDesign()` turns a template
   <tr>
     <td valign="top">
       <h4>⚑ Nothing lands silently</h4>
-      An edit that can't land in source is <b>held back with a reason</b>, never written with a wrong value. That covers the <code>01</code> that code numbers, a deleted block, or a locked stamp. One click puts the builder back. A broken edit in code names its file and line, and the builder keeps the last good design.
+      An edit that can't land in source is <b>held back with a reason</b>, never written with a wrong value. That covers the <code>01</code> that code numbers, a deleted block, a locked stamp, and <b>anything the template refuses</b>: a 70-character headline in the builder comes back as <i>"The template refuses it: Headline: is longer than 48 characters."</i> One click puts the builder back. A broken edit in code names its file and line, and the builder keeps the last good design.
     </td>
     <td valign="top">
       <img src="docs/media/studio-error.png" alt="A missing comma in issue.json: the studio says the JSON isn't valid between lines 4 and 5, with a Go to line button" />
@@ -121,28 +121,33 @@ Press **▶ Watch a round trip** in the studio for a 30-second guided run throug
 ## How it works
 
 ```
- Newsletter.tsx + issue.json ──toDesign()──▶ Unlayer builder
-          ▲                                        │
-          │       one-line patch                   │ design:updated
-          └──── trace ◀── fromDesign() ◀───────────┘
+ Newsletter.tsx (template()) + issue.values.json ──check() → design() → toDesign()──▶ Unlayer builder
+          ▲                                                                            │
+          │       one-line patch, if the template's check() accepts it                 │ design:updated
+          └──── trace ◀── fromDesign() ◀───────────────────────────────────────────────┘
                     │
                     └─▶ render() → validate() + emailClients() → 9 client stamps
 ```
 
-1. **Push.** The template compiles in the browser (Sucrase), and `toDesign()` produces the builder design and a report. The report marks what the builder can't edit. Here that's the `Layer` cover and a custom `defineElement()` stamp, which become **locked zones on purpose**.
-2. **Trace.** Round Trip renders the template a second time, with every string in `issue.json` swapped for a numbered token. `toDesign()` is deterministic, so block ids line up with the real design. Each field becomes a pattern like `"01 · ⟦tag⟧"` that maps text back to its data path.
+The template is a Hyper Elements `template()`: typed, labelled fields with limits and guidance (`hero.title` is a *Headline* of at most 48 characters), and a `render` that owns every loop and layout decision. Its copy lives in `issue.values.json`, a standard Hyper Elements **values file**, so the official CLI checks it as it stands: `hyper-elements check template/issue.values.json`.
+
+1. **Push.** The template compiles in the browser (Sucrase). `readValuesFile()` reads the values against it, `check()` validates them, `design()` builds the email, and `toDesign()` produces the builder design and a report. The report marks what the builder can't edit. Here that's the `Layer` cover and a custom `defineElement()` stamp, which become **locked zones on purpose**.
+2. **Trace.** Round Trip builds the design a second time, with every value swapped for a numbered token. `toDesign()` is deterministic, so block ids line up with the real design. Each field becomes a pattern like `"01 · ⟦tag⟧"` that maps text back to its field path. (A node's `field=` binding isn't written into the Unlayer design, so the trace is what carries provenance through the builder.)
 3. **Pull.** When the builder fires `design:updated`, each changed block is matched to its pattern:
-   - **Copy** (words from `issue.json`): the new value is patched into the JSON text in place, so the diff is exactly one line.
+   - **Copy** (a template field): the new value is checked by the template's `check()`. If it passes, it's patched into the values file in place, so the diff is exactly one line. If not, it's held back with the template's own message.
    - **Code text** (words written in the JSX): the literal is patched in `Newsletter.tsx`.
    - **Computed text** (like the `01` that code numbers): held back with a note for the engineer.
    - **Structure** (added, removed or moved blocks): reported, with the raw `fromDesign()` JSX as ground truth.
 4. **Check.** The patched template re-renders, and `validate()` with `emailClients()` runs alongside `renderInEmailClients()`.
 
 <details>
-<summary><b>How Hyper Elements is used</b> (nine APIs)</summary>
+<summary><b>How Hyper Elements is used</b> (twelve APIs)</summary>
 
 | API | Package | Where | What it does here |
 |---|---|---|---|
+| `template()` + `field.image()` + `prop.*` | `@hyper-elements/react/template` | `template/Newsletter.tsx` | The newsletter as a template: typed, labelled fields with limits and guidance; everything else is fixed. |
+| `readValuesFile()` + `check()` + `design()` | `@hyper-elements/react/template` | `src/lib/rt/engine.ts` | Reads `issue.values.json`, checks it, builds the email. `check()` runs again on every builder edit and refuses what the template refuses. |
+| `describe()` | `@hyper-elements/react/template` | `src/lib/rt/ownership.ts` | Each field's label, limit and guidance, shown on its block in the ownership map. |
 | `toDesign()` | `@hyper-elements/react/builder` | `src/lib/rt/engine.ts` | JSX → Unlayer design. Run twice per push: once for real, once traced. Its report drives the locked zones. |
 | `fromDesign()` | `@hyper-elements/react/builder` | `src/lib/rt/engine.ts` | The builder's design as JSX, shown raw in the studio as ground truth. |
 | `render()` | `@hyper-elements/react` | `src/lib/rt/checks.ts`, `src/lib/landing-data.ts` | Email HTML and text after every trip, the change request's before/after, and the landing page's live specimen. |
@@ -151,7 +156,7 @@ Press **▶ Watch a round trip** in the studio for a 30-second guided run throug
 | `defineTheme()` | `@hyper-elements/react` | `template/theme.ts` | The Kestrel brand: colors, type scale, button and kicker styles. |
 | `defineElement()` | `@hyper-elements/react` | `template/Newsletter.tsx` | `IssueStamp`, a custom element and a deliberate locked zone. |
 | `Canvas` + `renderImage()` | `@hyper-elements/react/image` | `scripts/art.tsx` | Every illustration in the newsletter is drawn by Hyper Elements. There is no stock art. |
-| `hyper-elements check` | `@hyper-elements/cli` | `npm run check`, CI | The same checks from the shell, on every push. |
+| `hyper-elements check` | `@hyper-elements/cli` | `npm run check`, CI | The template module (with its example) and the values file, checked from the shell on every push. `package.json` lists `template/**` as trusted templates. |
 
 Elements used in the template: `Email`, `Section`, `Row`, `Column`, `Grid`, `Layer`, `Heading`, `Text`, `Span`, `Link`, `Button`, `Image`, `Divider`, `List`, `ListItem`, `Social`, `Menu`, plus `token()`, theme `styles`, scoped `tokens` and phone styles.
 
@@ -175,15 +180,16 @@ Open <http://localhost:3000> for the landing page and <http://localhost:3000/stu
 
 Then try it:
 
-1. Click the headline *"Dashboards that build themselves"* in the builder and change a word. `issue.json` changes on the left, and **Git diff** shows one line.
-2. Edit a feature title in `issue.json`. The builder reloads with it.
-3. Change the `01` in *"01 · New"* in the builder. It's computed in code, so it's held back with a note.
-4. Open **Email clients** and click a stamp.
-5. Press **Review changes**, turn on **Spot the difference**, then **Approve & merge**.
+1. Click the headline *"Dashboards that build themselves"* in the builder and change a word. `issue.values.json` changes on the left, and **Git diff** shows one line.
+2. Now make the headline longer than 48 characters. The template refuses it, and the edit is held back with its message.
+3. Edit a feature title in `issue.values.json`. The builder reloads with it.
+4. Change the `01` in *"01 · New"* in the builder. It's computed in code, so it's held back with a note.
+5. Open **Email clients** and click a stamp.
+6. Press **Review changes**, turn on **Spot the difference**, then **Approve & merge**.
 
 **Sync with disk** (dev only) writes every trip to `template/` and picks up saves from your own editor, so `git diff` in your terminal shows the same one-line change.
 
-> On `http://localhost` the builder (served over https) can't show images from your machine. The email itself is fine. Set `NEXT_PUBLIC_ASSET_BASE` to any https copy of `public/` to see the art inside the builder locally. The deployed site has no such issue.
+The art is served from the deployed site (`ASSETS` in `template/theme.ts`), so the builder shows it on `localhost` too.
 
 <details>
 <summary><b>Headless: the round trip from the shell</b></summary>
@@ -191,7 +197,8 @@ Then try it:
 ```bash
 npm run push                            # template/ → out/design.json, plus the locked-zone report and client checks
 npm run pull -- edited.design.json      # an edited design → patches template/, prints the receipt, re-checks clients
-npm run check                           # hyper-elements check on the template
+npm run check                           # hyper-elements check on the template and its values file
+npm run selftest                        # the round trip's invariants, headless: determinism, ids, one-line diffs, guardrails
 npm run art                             # redraw the illustrations with Canvas + renderImage()
 ```
 
@@ -218,20 +225,20 @@ There, `/` and `/studio` are static, `/api/clients` runs the emulator on Node (i
 <summary><b>Project layout</b></summary>
 
 ```
-template/            the template: Newsletter.tsx, issue.json, theme.ts
+template/            the template: Newsletter.tsx (template()), issue.values.json (its values file), theme.ts
 src/lib/rt/          the round-trip engine
-  compile.ts         Sucrase + a tiny require(): template files → component, in the browser
+  compile.ts         Sucrase + a tiny require(): template files → a live template(), in the browser
   bind.ts            sentinel render, patterns, path helpers
   design.ts          reads Unlayer designs as blocks and fields (lexical, HTML, buttons, images, menus)
   engine.ts          build() and pull()
   jsonText.ts        format-preserving JSON patch (one-line diffs) and value lookup
-  ownership.ts       copy / code text / locked / fixed
+  ownership.ts       copy / code text / locked / fixed, with field labels from describe()
   checks.ts          render + validate in the browser, emulator via /api/clients
   spot.ts            "Spot the difference": a word-level diff of two renders
   errors.ts          build errors → file, line and a sentence
 src/components/      studio (Builder, CodePanel, DiffView, ClientStamps, ReviewModal) and landing
 src/app/api/         clients (emulator) and template (dev-only disk sync)
-scripts/             roundtrip.tsx (CLI), art.tsx (Canvas art), capture.mjs (README media), dev.mjs
+scripts/             roundtrip.tsx (CLI), selftest.tsx, art.tsx (Canvas art), capture.mjs (README media), dev.mjs
 .github/workflows/   pages.yml: checks on every push, GitHub Pages deploy from main
 ```
 
@@ -241,6 +248,7 @@ scripts/             roundtrip.tsx (CLI), art.tsx (Canvas art), capture.mjs (REA
 
 - Rich formatting added in the builder (bold, a new link) isn't written back. Words are. The design keeps the formatting, and the receipt tells you.
 - Structural edits (new or deleted blocks) aren't merged into the JSX. They're reported, and the `fromDesign()` tab shows them as code to copy.
+- An image swapped in the builder keeps its declared size (`width`, `height`) in the values file, so the template checks it against the old size until someone runs `hyper-elements design set … @path`, which reads the new file's size.
 - Template checks with the full plugin run on the server only when the studio's JSX matches the committed template, because the server never runs code it is sent. HTML-level client checks always run.
 - The live demo on GitHub Pages has no Node server, so the client emulator runs only locally or on a Node host.
 

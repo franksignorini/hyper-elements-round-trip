@@ -50,7 +50,6 @@ interface Finding {
 export interface CheckContext {
   files: Record<string, string>;
   issue: unknown;
-  assetBase: string;
 }
 
 export async function runChecks(element: ReactElement, ctx: CheckContext): Promise<CheckResult> {
@@ -72,7 +71,6 @@ export async function runChecks(element: ReactElement, ctx: CheckContext): Promi
         issue: ctx.issue,
         template: ctx.files["Newsletter.tsx"],
         theme: ctx.files["theme.ts"],
-        assetBase: ctx.assetBase,
       }),
     });
     if (res.ok) {
@@ -126,7 +124,6 @@ export async function previewIn(html: string, client: ClientId, ctx: CheckContex
       issue: ctx.issue,
       template: ctx.files["Newsletter.tsx"],
       theme: ctx.files["theme.ts"],
-      assetBase: ctx.assetBase,
     }),
     });
   } catch {

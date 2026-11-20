@@ -3,13 +3,13 @@
 import "server-only";
 import { render } from "@hyper-elements/react";
 import Newsletter from "@template/Newsletter";
+import { ASSETS } from "@template/theme";
 import { TEMPLATE_SOURCES } from "@/generated/sources";
 import { build } from "@/lib/rt/engine";
 import { ownership, type Owner } from "@/lib/rt/ownership";
-import type { TemplateComponent } from "@/lib/rt/compile";
 
-/** Stands in for the site's origin; the page swaps it for location.origin. */
-export const ASSET_TOKEN = "https://assets.round-trip.invalid";
+/** The template's art base; the page swaps it for this site's origin. */
+export const ASSET_TOKEN = ASSETS;
 
 export interface OwnedBlock {
   id: string;
@@ -31,7 +31,7 @@ export interface LandingData {
 }
 
 export async function landingData(): Promise<LandingData> {
-  const snap = build({ ...TEMPLATE_SOURCES }, ASSET_TOKEN, Newsletter as unknown as TemplateComponent);
+  const snap = build({ ...TEMPLATE_SOURCES }, Newsletter);
   const { html } = await render(snap.element);
   const owned = ownership(snap).map((o) => ({
     id: o.block.id,

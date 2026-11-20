@@ -1,43 +1,79 @@
 // The round trip itself.
-//   push: source files -> component -> toDesign() -> builder design (+ provenance)
-//   pull: edited builder design -> patches to issue.json and Newsletter.tsx
-import { createElement, type ReactElement } from "react";
+//   push: values file -> template.check() -> template.design() -> toDesign() -> builder design (+ provenance)
+//   pull: edited builder design -> patches to issue.values.json and Newsletter.tsx, re-checked by the template
+import type { ReactElement } from "react";
 import { fromDesign, toDesign } from "@hyper-elements/react/builder";
-import { compileTemplate, type Files, type TemplateComponent } from "./compile";
+import { readValuesFile, type TemplateDescription } from "@hyper-elements/react/template";
+import { compileTemplate, type Files, type Template } from "./compile";
 import { blocksOf, blockLabel, EDITABLE, normalizeText, type Block, type Design } from "./design";
 import { bindingsOf, formatPath, getAt, matchPattern, sentinelize, setAt, tokensIn, type Bindings, type Path } from "./bind";
 import { patchJsonValue } from "./jsonText";
 
 export const ENTRY = "Newsletter.tsx";
-export const DATA = "issue.json";
+/** A Hyper Elements values file: { version, template, values }. */
+export const DATA = "issue.values.json";
+/** A value's path in the values file: the template's values sit under "values". */
+export const filePath = (path: Path): Path => ["values", ...path];
+
+type Values = Record<string, unknown>;
+interface Diagnostic {
+  severity: string;
+  code: string;
+  message: string;
+  path?: string;
+}
+
+/** Values the template refuses. `path` is where, as the template says it ("values.hero.title"). */
+export class ValuesError extends Error {
+  constructor(
+    readonly diagnostics: Diagnostic[],
+  ) {
+    const first = diagnostics[0];
+    super(`${DATA}: ${first?.message ?? "the template refused these values"}${first?.path ? ` (at ${first.path})` : ""}`);
+  }
+}
 
 export interface Snapshot {
   files: Files;
-  issue: unknown;
+  template: Template;
+  /** The template's values, as checked. */
+  issue: Values;
   element: ReactElement;
   design: Design;
   report: string[];
   blocks: Block[];
   bindings: Bindings;
   paths: Path[];
+  /** What the template asks a reviewer to look at: each field's guidance. */
+  review: { field?: string; template?: string; guidance: string }[];
+  /** The template's own account of its fields: labels, guidance, limits. */
+  description: TemplateDescription;
 }
 
+const errorsOf = (diagnostics: readonly Diagnostic[]) => diagnostics.filter((d) => d.severity === "error");
+
 /**
- * Builds a snapshot from the files. Pass `Template` to use an already-imported
- * component (the server does, for the committed template) instead of compiling.
+ * Builds a snapshot from the files. Pass `template` to use an already-imported
+ * one (the server does, for the committed template) instead of compiling.
  */
-export function build(files: Files, assetBase: string, Template?: TemplateComponent): Snapshot {
-  const issue = JSON.parse(files[DATA]);
-  const Component = Template ?? compileTemplate(files, ENTRY);
-  const element = createElement(Component, { issue, assetBase });
+export function build(files: Files, template?: Template): Snapshot {
+  const T = template ?? compileTemplate(files, ENTRY);
+  const read = readValuesFile(JSON.parse(files[DATA]), T);
+  if (!read.values || errorsOf(read.diagnostics).length) throw new ValuesError(errorsOf(read.diagnostics));
+  const issue = read.values;
+  const checked = T.check(issue);
+  if (!checked.valid) throw new ValuesError(errorsOf(checked.diagnostics));
+
+  const element = T.design(issue as never);
   const { design, report } = toDesign(element);
 
-  // Same template, data swapped for tokens: tells us where every word came from.
+  // Same template, every value swapped for a token: tells us where every word came from.
   const sentinel = sentinelize(issue);
-  const traced = toDesign(createElement(Component, { issue: sentinel.data, assetBase }));
+  const traced = toDesign(T.design(sentinel.data as never));
 
   return {
     files,
+    template: T,
     issue,
     element,
     design: design as unknown as Design,
@@ -45,6 +81,8 @@ export function build(files: Files, assetBase: string, Template?: TemplateCompon
     blocks: blocksOf(design as unknown as Design),
     bindings: bindingsOf(traced.design as unknown as Design),
     paths: sentinel.paths,
+    review: checked.review,
+    description: T.describe(),
   };
 }
 
@@ -162,19 +200,57 @@ export function pull(snapshot: Snapshot, edited: Design): PullResult {
     if (moved) changes.push({ kind: "moved", block: moved.id, type: moved.type, label: blockLabel(moved) });
   }
 
+  // The template's guardrails apply to builder edits too: check the values with
+  // the edits in, and hold back each edit the template refuses, with its reason.
+  let copies = changes.filter((c): c is CopyChange => c.kind === "copy");
+  if (copies.length) {
+    const refused = refusals(snapshot, copies);
+    if (refused.size) {
+      for (const [copy, message] of refused) {
+        changes[changes.indexOf(copy)] = {
+          kind: "conflict",
+          block: copy.block,
+          field: copy.field,
+          before: copy.before,
+          after: copy.after,
+          reason: `The template refuses it: ${message}.`,
+        };
+      }
+      copies = copies.filter((c) => !refused.has(c));
+      issue = copies.reduce((acc, c) => setAt(acc, c.rawPath, c.after), snapshot.issue);
+    }
+  }
+
   const files = { ...snapshot.files };
-  const copies = changes.filter((c): c is Extract<Change, { kind: "copy" }> => c.kind === "copy");
   if (copies.length) {
     // Patch the JSON text in place so the diff is one line per edit.
     let text: string | null = snapshot.files[DATA];
     for (const c of copies) {
-      text = text === null ? null : patchJsonValue(text, c.rawPath, c.after);
+      text = text === null ? null : patchJsonValue(text, filePath(c.rawPath), c.after);
     }
-    files[DATA] = text ?? `${JSON.stringify(issue, null, 2)}\n`;
+    files[DATA] = text ?? `${JSON.stringify({ ...JSON.parse(snapshot.files[DATA]), values: issue }, null, 2)}\n`;
   }
   if (tsx !== snapshot.files[ENTRY]) files[ENTRY] = tsx;
   const applied = changes.filter((c) => c.kind === "copy" || c.kind === "code").length;
   return { files, changes, applied };
+}
+
+type CopyChange = Extract<Change, { kind: "copy" }>;
+
+/** Each copy edit the template refuses, with the template's message. */
+function refusals(snapshot: Snapshot, copies: CopyChange[]): Map<CopyChange, string> {
+  const refused = new Map<CopyChange, string>();
+  const valuesWith = (list: CopyChange[]) => list.reduce((acc, c) => setAt(acc, c.rawPath, c.after), snapshot.issue);
+  let errors = errorsOf(snapshot.template.check(valuesWith(copies)).diagnostics);
+  for (const d of errors) {
+    const at = (d.path ?? "").replace(/^values\./, "");
+    const copy = copies.find((c) => at === c.path || at.startsWith(`${c.path}.`) || at.startsWith(`${c.path}[`));
+    if (copy && !refused.has(copy)) refused.set(copy, d.message);
+  }
+  // Anything still refused that we couldn't pin on one edit: hold every edit back.
+  errors = errorsOf(snapshot.template.check(valuesWith(copies.filter((c) => !refused.has(c)))).diagnostics);
+  if (errors.length) for (const c of copies) if (!refused.has(c)) refused.set(c, errors[0].message);
+  return refused;
 }
 
 /** What fromDesign() alone gives back: the edited design as flat JSX, values baked in. */

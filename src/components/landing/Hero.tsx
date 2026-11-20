@@ -139,7 +139,7 @@ export function Hero({ blocks, bound }: { blocks: number; bound: number }) {
             </div>
             <div>
               <dt>{bound}</dt>
-              <dd>strings traced back to issue.json</dd>
+              <dd>strings traced to template fields</dd>
             </div>
             <div>
               <dt>0</dt>
@@ -154,7 +154,7 @@ export function Hero({ blocks, bound }: { blocks: number; bound: number }) {
         <div className={styles.tickerTrack}>
           {Array.from({ length: 2 }).map((_, k) => (
             <span key={k}>
-              JSX → BUILDER → JSX ✺ LOOPS STAY LOOPS ✺ COPY LANDS IN issue.json ✺ LOCKED ZONES STAY LOCKED ✺ ONE-LINE
+              JSX → BUILDER → JSX ✺ LOOPS STAY LOOPS ✺ COPY LANDS IN THE VALUES FILE ✺ THE TEMPLATE CHECKS EVERY EDIT ✺ LOCKED ZONES STAY LOCKED ✺ ONE-LINE
               DIFFS ✺ 9 EMAIL CLIENTS RE-CHECKED ✺ NO PROJECT ID NEEDED ✺{" "}
             </span>
           ))}

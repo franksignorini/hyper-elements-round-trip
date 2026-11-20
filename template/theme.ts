@@ -1,5 +1,9 @@
 import { defineTheme } from "@hyper-elements/react";
 
+// Where the art lives. Images in issue.values.json may be a path under it
+// ("art/feature-boards.png") or any https URL a marketer pastes in the builder.
+export const ASSETS = "https://franksignorini.github.io/hyper-elements-round-trip";
+
 // The Kestrel brand, written once. Every block in Newsletter.tsx inherits it,
 // and toDesign() carries these values into the builder as each tool's defaults.
 export const kestrel = defineTheme({

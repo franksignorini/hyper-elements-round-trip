@@ -108,8 +108,8 @@ await page.getByRole("tab", { name: /Git diff/ }).click();
 await wait(2200);
 await page.screenshot({ path: "docs/media/studio-diff.png" });
 
-// Engineer: edit a feature title in issue.json, watch the builder follow.
-await page.getByRole("tab", { name: "issue.json" }).click();
+// Engineer: edit a feature title in issue.values.json, watch the builder follow.
+await page.getByRole("tab", { name: "issue.values.json" }).click();
 await wait(500);
 const line = page.locator(".cm-line", { hasText: '"title": "Auto-boards"' }).first();
 await line.scrollIntoViewIfNeeded();
@@ -138,7 +138,7 @@ await wait(1200);
 await page.screenshot({ path: "docs/media/studio-jump.png" });
 
 // A broken edit names its file and line, and the builder keeps the last good design.
-await page.getByRole("tab", { name: "issue.json" }).click();
+await page.getByRole("tab", { name: "issue.values.json" }).click();
 const dateLine = page.locator(".cm-line", { hasText: '"date": "November 2026",' }).first();
 await dateLine.scrollIntoViewIfNeeded();
 await dateLine.click();

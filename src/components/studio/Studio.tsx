@@ -5,7 +5,7 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import { diffLines } from "diff";
 import { TEMPLATE_SOURCES } from "@/generated/sources";
-import { build, DATA, ENTRY, flatJsx, pull, type Change, type Snapshot } from "@/lib/rt/engine";
+import { build, DATA, ENTRY, filePath, flatJsx, pull, type Change, type Snapshot } from "@/lib/rt/engine";
 import { CompileError } from "@/lib/rt/compile";
 import type { Design } from "@/lib/rt/design";
 import { blockLabel } from "@/lib/rt/design";
@@ -50,14 +50,8 @@ interface Flight {
 const HEAD: Record<string, string> = ((globalThis as { __rtHead?: Record<string, string> }).__rtHead ??= {
   ...TEMPLATE_SOURCES,
 });
-const OWNERS = { "Newsletter.tsx": "engineer", "theme.ts": "engineer", "issue.json": "shared" } as const;
+const OWNERS = { "Newsletter.tsx": "engineer", "theme.ts": "engineer", "issue.values.json": "shared" } as const;
 type DockTab = "receipts" | "diff" | "ownership" | "clients" | "flat";
-
-// Unlayer's builder is served over https, so on http://localhost it can't load
-// our art: point NEXT_PUBLIC_ASSET_BASE at any https copy of public/ to see it.
-const studioAssetBase = () =>
-  process.env.NEXT_PUBLIC_ASSET_BASE ||
-  (typeof window === "undefined" ? "" : window.location.origin + (process.env.NEXT_PUBLIC_BASE_PATH ?? ""));
 
 const now = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
@@ -75,7 +69,7 @@ function changedLines(before: string, after: string): number[] {
 function describe(change: Change): ReceiptLine {
   switch (change.kind) {
     case "copy":
-      return { tone: "copy", text: `issue.json › ${change.path}`, detail: `“${change.before}” → “${change.after}”` };
+      return { tone: "copy", text: `${DATA} › ${change.path}`, detail: `“${change.before}” → “${change.after}”` };
     case "code":
       return { tone: "code", text: `${change.file} › literal text`, detail: `“${change.before}” → “${change.after}”` };
     case "conflict":
@@ -97,7 +91,7 @@ export default function Studio() {
   // The first build happens here, before the first paint (this component never renders on the server).
   const [initial] = useState(() => {
     try {
-      return { snap: build(HEAD, studioAssetBase()), error: null };
+      return { snap: build(HEAD), error: null };
     } catch (e) {
       return { snap: null, error: locateError(HEAD, (e as Error).message) };
     }
@@ -134,7 +128,6 @@ export default function Studio() {
   const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const diskSeen = useRef<Record<string, string> | null>(null);
   const heldKey = useRef("[]");
-  const assetBase = studioAssetBase();
 
   useEffect(() => {
     filesRef.current = files;
@@ -153,13 +146,13 @@ export default function Studio() {
   const check = useCallback(async (snap: Snapshot) => {
     setChecking(true);
     try {
-      const result = await runChecks(snap.element, { files: snap.files, issue: snap.issue, assetBase });
+      const result = await runChecks(snap.element, { files: snap.files, issue: snap.issue });
       setChecks(result);
       setCheckKey((k) => k + 1);
     } finally {
       setChecking(false);
     }
-  }, [assetBase]);
+  }, []);
 
   const writeDisk = useCallback(
     async (next: Record<string, string>) => {
@@ -176,7 +169,7 @@ export default function Studio() {
       const t0 = performance.now();
       let snap: Snapshot;
       try {
-        snap = build(next, assetBase);
+        snap = build(next);
       } catch (e) {
         setCompileError(locateError(next, e instanceof CompileError ? e.message : (e as Error).message));
         return;
@@ -209,7 +202,7 @@ export default function Studio() {
       addReceipt({ who, title: note ?? "Code → builder", ms, lines });
       void check(snap);
     },
-    [assetBase, addReceipt, check, fly, held.length],
+    [addReceipt, check, fly, held.length],
   );
 
   // First checks, on the first build.
@@ -296,7 +289,7 @@ export default function Studio() {
       const next = { ...before, ...result.files };
       let snapNext: Snapshot;
       try {
-        snapNext = build(next, assetBase);
+        snapNext = build(next);
       } catch (e) {
         setCompileError(locateError(next, (e as Error).message));
         return;
@@ -324,17 +317,19 @@ export default function Studio() {
       void writeDisk(next);
       void check(snapNext);
     },
-    [addReceipt, assetBase, check, fly, writeDisk],
+    [addReceipt, check, fly, writeDisk],
   );
 
   useEffect(() => {
     onBuilderEditRef.current = onBuilderEdit;
   }, [onBuilderEdit]);
 
-  // Dev only: feed a design through the same path as a builder edit (QA and captures).
+  // Dev only: read the current design, and feed one through the same path as a builder edit (QA and captures).
   useEffect(() => {
     if (process.env.NODE_ENV !== "development") return;
-    (window as unknown as { __rtPull?: (d: Design) => void }).__rtPull = (d) => onBuilderEditRef.current(d);
+    const w = window as unknown as { __rtPull?: (d: Design) => void; __rtDesign?: () => Design | undefined };
+    w.__rtPull = (d) => onBuilderEditRef.current(d);
+    w.__rtDesign = () => snapRef.current?.design;
   }, []);
 
   /** Opens a file at a line and flashes it: build errors and the ownership map use this. */
@@ -343,10 +338,10 @@ export default function Studio() {
     setFlash({ file, lines, key: ++ids.current });
   };
 
-  /** Where a block comes from: its issue.json lines, or the JSX that writes it. */
+  /** Where a block comes from: its lines in the values file, or the JSX that writes it. */
   const sourceOf = (o: Owned): { file: string; lines: number[] } | null => {
     if (o.rawPaths.length) {
-      const lines = o.rawPaths.map((p) => jsonValueLine(files[DATA], p)).filter((n): n is number => n !== null);
+      const lines = o.rawPaths.map((p) => jsonValueLine(files[DATA], filePath(p))).filter((n): n is number => n !== null);
       return lines.length ? { file: DATA, lines } : null;
     }
     const tsx = files[ENTRY];
@@ -421,15 +416,15 @@ export default function Studio() {
       await go(2, "builder", `…and retypes one word of the headline: “${from}” → “${to}”.`, 900);
       builder.current?.load(next);
       onBuilderEditRef.current(next);
-      await go(3, "code", "Round Trip traced the word to issue.json and patched that one line.", 2600);
+      await go(3, "code", "Round Trip traced the word to the template’s values file, checked it, and patched that one line.", 2600);
       setTab("diff");
       await go(4, "dock", "The git diff: one line. The loops in Newsletter.tsx are untouched.", 3000);
       setActive(DATA);
       await go(5, "code", "Now the engineer renames a feature, in code…", 1200);
       // Types " 2.0" onto the first feature, or backspaces it away on a second run,
       // so every run shows a real code edit reaching the builder.
-      const issue = JSON.parse(filesRef.current[DATA]) as { features: { title: string }[] };
-      const current = issue.features[0].title;
+      const issue = JSON.parse(filesRef.current[DATA]) as { values: { features: { title: string }[] } };
+      const current = issue.values.features[0].title;
       const base = current.replace(/ 2\.0$/, "");
       const target = current === base ? `${base} 2.0` : base;
       const frames =
@@ -438,7 +433,7 @@ export default function Studio() {
           : Array.from({ length: current.length - target.length }, (_, i) => current.slice(0, current.length - i - 1));
       for (const title of frames) {
         if (stopDemo.current) throw new Error("stopped");
-        const text = patchJsonValue(filesRef.current[DATA], ["features", 0, "title"], title);
+        const text = patchJsonValue(filesRef.current[DATA], filePath(["features", 0, "title"]), title);
         if (text) onCodeChange(DATA, text);
         await sleep(200);
       }
@@ -546,7 +541,6 @@ export default function Studio() {
         files={files}
         checks={checks}
         authors={authors}
-        assetBase={assetBase}
         onClose={() => setReviewOpen(false)}
         onMerge={merge}
       />
@@ -613,8 +607,8 @@ export default function Studio() {
                   <b>Try it</b>
                   <ol>
                     <li>Click the headline “Dashboards that build themselves” and change a word.</li>
-                    <li>Watch issue.json on the left: that exact line changes.</li>
-                    <li>Edit a feature title in issue.json: the builder follows.</li>
+                    <li>Watch issue.values.json on the left: that exact line changes.</li>
+                    <li>Edit a feature title in issue.values.json: the builder follows.</li>
                   </ol>
                   <button onClick={() => setCoach(false)}>Got it</button>
                 </motion.aside>
@@ -755,8 +749,8 @@ export default function Studio() {
                   </div>
                 ))}
                 <p className={styles.dim}>
-                  Read from <code>toDesign()</code>’s report and a traced second render. Click a block to see the line it
-                  comes from.
+                  Read from <code>toDesign()</code>’s report and a traced second render; each field’s label and limit
+                  from the template’s <code>describe()</code>. Click a block to see the line it comes from.
                 </p>
               </div>
               <div className={styles.blocks}>
@@ -772,11 +766,22 @@ export default function Studio() {
                       transition={{ delay: i * 0.012 }}
                       disabled={!source}
                       onClick={() => source && jumpTo(source.file, source.lines)}
-                      title={source ? `Show it in ${source.file}, line ${source.lines.join(", ")}` : undefined}
+                      title={
+                        [
+                          source && `Show it in ${source.file}, line ${source.lines.join(", ")}`,
+                          ...o.fields.map((f) => f.guidance && `${f.label}: ${f.guidance}`),
+                        ]
+                          .filter(Boolean)
+                          .join("\n") || undefined
+                      }
                     >
                       <span className={styles.blockType}>{o.block.type}</span>
                       <span className={styles.blockLabel}>{o.label}</span>
-                      {o.paths.length > 0 && <code>{o.paths.join(", ")}</code>}
+                      {o.fields.length > 0 && (
+                        <code>
+                          {o.fields.map((f) => `${f.label}${f.maxLength ? ` ≤${f.maxLength}` : ""} · ${f.path}`).join(", ")}
+                        </code>
+                      )}
                       {source && (
                         <span className={styles.blockSource}>
                           {source.file}:{source.lines[0]} ↗
@@ -794,7 +799,7 @@ export default function Studio() {
               <p>
                 This is what <code>fromDesign()</code> returns for the builder’s current design: correct, but flat. Loops are
                 unrolled and data is baked in. Round Trip uses it as the ground truth, then traces each edit back to
-                the line in <code>issue.json</code> or <code>Newsletter.tsx</code> it came from.
+                the line in <code>issue.values.json</code> or <code>Newsletter.tsx</code> it came from.
               </p>
               <pre>{flat.code}</pre>
             </div>

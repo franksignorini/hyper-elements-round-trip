@@ -1,7 +1,7 @@
 "use client";
 
 // The real email, rendered by Hyper Elements, separated like a riso print into
-// its plates: the orange plate is copy from issue.json, the blue plate is what
+// its plates: the orange plate is copy from issue.values.json, the blue plate is what
 // code owns (locked blocks and words written in the JSX). Rects are measured in
 // the rendered HTML, so the plates match the email exactly.
 import { useMemo, useRef, useState, useSyncExternalStore } from "react";
@@ -125,13 +125,13 @@ export function Plates({ html, owned, token }: { html: string; owned: OwnedBlock
             One email, <em data-tone="orange">two plates.</em>
           </h2>
           <p>
-            Scroll to pull the print apart. Orange is copy that lives in <code>issue.json</code> ({counts.copy} blocks): the
+            Scroll to pull the print apart. Orange is copy that lives in <code>issue.values.json</code> ({counts.copy} blocks): the
             marketer&rsquo;s. Blue is what code owns: {counts.locked} locked blocks from <code>toDesign()</code>&rsquo;s
             report, and {counts.code} lines written in the JSX. Measured from the HTML that <code>render()</code> just
             produced.
           </p>
           <ul className={styles.plateLegend}>
-            <li data-owner="copy">Copy · issue.json</li>
+            <li data-owner="copy">Copy · issue.values.json</li>
             <li data-owner="code-text">Code text · Newsletter.tsx</li>
             <li data-owner="locked">Locked · HTML block</li>
           </ul>

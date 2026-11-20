@@ -1,4 +1,4 @@
-// Provenance: which issue.json value (or which literal in the JSX) put each word
+// Provenance: which template value (or which literal in the JSX) put each word
 // into each builder block. We render the template a second time with every string
 // in the data swapped for a numbered token. toDesign() is deterministic, so block
 // ids line up with the real design, and each field's text becomes a pattern like
@@ -71,4 +71,9 @@ export function setAt<T>(data: T, path: Path, value: unknown): T {
 
 export function formatPath(path: Path): string {
   return path.reduce<string>((s, k) => (typeof k === "number" ? `${s}[${k}]` : s ? `${s}.${k}` : k), "");
+}
+
+/** "values.features[1].title" -> ["values", "features", 1, "title"] */
+export function parsePath(text: string): Path {
+  return [...text.matchAll(/([^.[\]]+)|\[(\d+)\]/g)].map((m) => (m[2] !== undefined ? Number(m[2]) : m[1]));
 }

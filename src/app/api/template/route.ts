@@ -4,7 +4,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-const FILES = ["Newsletter.tsx", "theme.ts", "issue.json"] as const;
+const FILES = ["Newsletter.tsx", "theme.ts", "issue.values.json"] as const;
 const DIR = path.join(process.cwd(), "template");
 const enabled = process.env.NODE_ENV === "development";
 

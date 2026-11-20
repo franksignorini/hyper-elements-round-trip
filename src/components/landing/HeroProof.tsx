@@ -1,7 +1,7 @@
 "use client";
 
 // The whole idea in ten seconds, above the fold: a word retyped in the builder
-// becomes a one-line diff in issue.json; a title edited in code reaches the builder;
+// becomes a one-line diff in issue.values.json; a title edited in code reaches the builder;
 // the clients re-check. Loops forever.
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
@@ -37,7 +37,7 @@ export function HeroProof() {
   const suffix = step === 4 ? SUFFIX.slice(0, chars) : step >= 5 ? SUFFIX : "";
 
   return (
-    <div className={styles.proof} aria-label="A headline edited in the builder becomes a one-line change in issue.json">
+    <div className={styles.proof} aria-label="A headline edited in the builder becomes a one-line change in issue.values.json">
       <div className={styles.proofPane} data-side="builder">
         <span className={styles.proofLabel} data-tone="orange">
           Unlayer builder · marketer
@@ -90,7 +90,7 @@ export function HeroProof() {
 
       <div className={styles.proofPane} data-side="code">
         <span className={styles.proofLabel} data-tone="blue">
-          template/issue.json · engineer
+          template/issue.values.json · engineer
         </span>
         <div className={styles.proofCode}>
           <div>{'"hero": {'}</div>
@@ -117,7 +117,7 @@ export function HeroProof() {
           <AnimatePresence mode="wait">
             {step >= 3 && step < 6 && (
               <motion.span key="diff" className={styles.proofDiff} initial={{ y: 8, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ opacity: 0 }}>
-                git diff · issue.json <b>+1</b> <i>−1</i>
+                git diff · issue.values.json <b>+1</b> <i>−1</i>
               </motion.span>
             )}
             {step === 6 && (

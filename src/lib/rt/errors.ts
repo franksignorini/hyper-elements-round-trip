@@ -1,5 +1,7 @@
 // Turns a failed build into something an editor can point at: which file, which
 // line, and a sentence a person can act on.
+import { parsePath } from "./bind";
+import { jsonValueLine } from "./jsonText";
 
 export interface BuildError {
   message: string;
@@ -84,23 +86,36 @@ export function jsonErrorOffset(text: string): number {
 
 const lineAt = (text: string, offset: number) => text.slice(0, offset).split("\n").length;
 
+const DATA = "issue.values.json";
+
 /** Where a build error points, in the template's files. */
 export function locateError(files: Record<string, string>, raw: string): BuildError {
-  // issue.json that doesn't parse.
-  if (/JSON/.test(raw) && files["issue.json"] !== undefined) {
-    const at = jsonErrorOffset(files["issue.json"]);
+  // A value the template refuses: "issue.values.json: Headline: is longer… (at values.hero.title)".
+  const refused = /^issue\.values\.json: ([\s\S]+?)(?: \(at ([^)]+)\))?$/.exec(raw);
+  if (refused && files[DATA] !== undefined) {
+    const [, reason, at] = refused;
+    const line = at ? jsonValueLine(files[DATA], parsePath(at)) : null;
+    return {
+      file: DATA,
+      line: line ?? undefined,
+      message: `The template refuses ${DATA}${line ? ` at line ${line}` : ""}: ${reason}.`,
+    };
+  }
+  // issue.values.json that doesn't parse.
+  if (/JSON/.test(raw) && files[DATA] !== undefined) {
+    const at = jsonErrorOffset(files[DATA]);
     if (at >= 0) {
-      const text = files["issue.json"];
+      const text = files[DATA];
       const failed = lineAt(text, at);
       // A missing comma fails on the next line's first token: the fix belongs on the line before.
       const before = lineAt(text, text.slice(0, at).trimEnd().length);
       const line = Math.min(before, failed);
       const lines = before < failed ? [before, failed] : [failed];
       return {
-        file: "issue.json",
+        file: DATA,
         line,
         lines,
-        message: `issue.json isn't valid JSON ${lines.length > 1 ? `between lines ${before} and ${failed}` : `at line ${line}`}. Check for a missing quote or comma.`,
+        message: `${DATA} isn't valid JSON ${lines.length > 1 ? `between lines ${before} and ${failed}` : `at line ${line}`}. Check for a missing quote or comma.`,
       };
     }
   }
@@ -112,6 +127,6 @@ export function locateError(files: Record<string, string>, raw: string): BuildEr
   }
   // The template ran and threw.
   return {
-    message: `The template threw while rendering: ${raw}. If you just edited issue.json, a field may be missing or renamed.`,
+    message: `The template threw while rendering: ${raw}. If you just edited ${DATA}, a field may be missing or renamed.`,
   };
 }

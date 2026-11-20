@@ -1,13 +1,17 @@
-// Compiles the template's virtual files (the editor's buffers) into a live React
-// component, entirely in the browser. Sucrase strips TypeScript and JSX; a tiny
-// require() resolves the three imports a template may use.
+// Compiles the template's virtual files (the editor's buffers) into a live
+// Hyper Elements template, entirely in the browser. Sucrase strips TypeScript and
+// JSX; a tiny require() resolves the imports a template may use.
 import { transform } from "sucrase";
 import * as React from "react";
 import * as jsxRuntime from "react/jsx-runtime";
 import * as Elements from "@hyper-elements/react";
+import * as Templates from "@hyper-elements/react/template";
+import { templateOf, type Template as TemplateOf } from "@hyper-elements/react/template";
 
 export type Files = Record<string, string>;
-export type TemplateComponent = React.ComponentType<{ issue?: unknown; assetBase?: string }>;
+/** Any template, whatever its fields: the engine reads them through describe() and check(). */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type Template = TemplateOf<any, any>;
 
 export class CompileError extends Error {
   constructor(
@@ -23,6 +27,7 @@ const externals: Record<string, unknown> = {
   "react/jsx-runtime": jsxRuntime,
   "react/jsx-dev-runtime": jsxRuntime,
   "@hyper-elements/react": Elements,
+  "@hyper-elements/react/template": Templates,
 };
 
 function normalize(spec: string, files: Files): string | null {
@@ -33,7 +38,7 @@ function normalize(spec: string, files: Files): string | null {
   return null;
 }
 
-export function compileTemplate(files: Files, entry = "Newsletter.tsx", overrides: Files = {}): TemplateComponent {
+export function compileTemplate(files: Files, entry = "Newsletter.tsx", overrides: Files = {}): Template {
   const all = { ...files, ...overrides };
   const cache = new Map<string, { exports: Record<string, unknown> }>();
 
@@ -78,7 +83,7 @@ export function compileTemplate(files: Files, entry = "Newsletter.tsx", override
   };
 
   const mod = load(entry);
-  const component = (mod.default ?? mod) as TemplateComponent;
-  if (typeof component !== "function") throw new CompileError(`${entry} has no default export component`, entry);
-  return component;
+  const found = templateOf(mod.default ?? mod);
+  if (!found) throw new CompileError(`${entry} has no default export made with template()`, entry);
+  return found;
 }

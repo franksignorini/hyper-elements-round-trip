@@ -1,9 +1,10 @@
 // The email client emulator runs on Node (it reads its measured fonts from disk).
 // POST { html, issue?, template? }  -> per-client diagnostics
 // POST { html, preview: "gmail" }   -> that client's preview HTML
-// The server never runs code it is sent: `issue` is data, and template checks
-// run on the committed Newsletter.tsx only when the browser's JSX matches it.
-import { createElement } from "react";
+// The server never runs code it is sent: `issue` is data (the template's values,
+// checked by the template), and template checks run on the committed
+// Newsletter.tsx only when the browser's JSX matches it.
+import type { ReactElement } from "react";
 import { validate } from "@hyper-elements/react";
 import { emailClients, PREVIEW_CLIENTS, renderInEmailClients, type EmailClient } from "@hyper-elements/email-clients";
 import Newsletter from "@template/Newsletter";
@@ -16,7 +17,6 @@ interface Body {
   issue?: unknown;
   template?: string;
   theme?: string;
-  assetBase?: string;
   preview?: string;
 }
 
@@ -39,13 +39,10 @@ export async function POST(request: Request) {
   // The element gives the emulator its exact model. We can build it safely only
   // from the committed code, so only when the browser's code is that code.
   const sameCode = body.template === TEMPLATE_SOURCES["Newsletter.tsx"] && body.theme === TEMPLATE_SOURCES["theme.ts"];
-  const element =
-    sameCode && body.issue && typeof body.issue === "object"
-      ? createElement(Newsletter, {
-          issue: body.issue as never,
-          assetBase: typeof body.assetBase === "string" ? body.assetBase : undefined,
-        })
-      : null;
+  let element: ReactElement | null = null;
+  if (sameCode && body.issue && typeof body.issue === "object" && Newsletter.check(body.issue).valid) {
+    element = Newsletter.design(body.issue as never);
+  }
 
   if (body.preview) {
     if (!(PREVIEW_CLIENTS as readonly string[]).includes(body.preview)) {

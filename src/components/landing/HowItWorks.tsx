@@ -8,7 +8,7 @@ const STEPS = [
   {
     kicker: "01 · Engineer",
     title: "Write the template once, in JSX.",
-    body: "Newsletter.tsx maps over issue.json: one row per feature, art that swaps sides on every other row, a stats band, a roadmap list. Real code, with real logic.",
+    body: "Newsletter.tsx is a Hyper Elements template(): typed, labelled fields for the copy, and a render that maps over them: one row per feature, art that swaps sides on every other row, a stats band, a roadmap list. Real code, with real logic.",
   },
   {
     kicker: "02 · toDesign()",
@@ -23,7 +23,7 @@ const STEPS = [
   {
     kicker: "04 · fromDesign() + trace",
     title: "The word finds its way home.",
-    body: "A second, traced render tells Round Trip which value produced every block. The edit becomes a one-line patch to issue.json, or to the literal in Newsletter.tsx. The loop stays a loop.",
+    body: "A second, traced render tells Round Trip which value produced every block. The edit becomes a one-line patch to the template's values file, or to the literal in Newsletter.tsx, and the template checks it first. The loop stays a loop.",
   },
   {
     kicker: "05 · Emulator",
@@ -34,15 +34,15 @@ const STEPS = [
 
 function SceneCode() {
   const lines = [
-    ["k", "export default function"],
-    ["f", " Newsletter({ issue }) {"],
-    ["c", "  // one row per feature"],
-    ["hot", "  {issue.features.map((feature, i) => ("],
+    ["k", "export default template({"],
+    ["f", "  fields, // typed copy: Headline ≤ 48…"],
+    ["c", "  render: (v) => // one row per feature"],
+    ["hot", "  {v.features.map((feature, i) => ("],
     ["t", "    <Row key={feature.title}>"],
     ["hot2", "      {i % 2 === 0 ? [art, words] : [words, art]}"],
     ["t", "    </Row>"],
     ["t", "  ))}"],
-    ["t", "  <Grid columns={3}>{issue.stats.map(…)}</Grid>"],
+    ["t", "  <Grid columns={3}>{v.stats.map(…)}</Grid>"],
   ];
   return (
     <div className={styles.sceneCode}>
@@ -147,7 +147,7 @@ function SceneTrace() {
         />
       </svg>
       <div className={styles.traceFile}>
-        <div className={styles.traceHead}>template/issue.json</div>
+        <div className={styles.traceHead}>template/issue.values.json</div>
         <div>{'  "kicker": "The Kestrel Dispatch",'}</div>
         <motion.div className={styles.del} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9 }}>
           {'-  "title": "Dashboards that build themselves",'}

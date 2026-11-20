@@ -5,12 +5,11 @@
 // 3. A copy edit, a code-text edit and an image swap each come back as the right patch,
 //    the JSON diff is one line, and a rebuild from the patched files matches the edit.
 import { readFile, writeFile } from "node:fs/promises";
-import { build, pull, type Change } from "../src/lib/rt/engine";
+import { build, DATA, pull, type Change } from "../src/lib/rt/engine";
 import { blocksOf, type Design, type Json } from "../src/lib/rt/design";
 import { tokensIn } from "../src/lib/rt/bind";
 
-const FILES = ["Newsletter.tsx", "theme.ts", "issue.json"];
-const ASSET_BASE = "https://franksignorini.github.io/hyper-elements-round-trip";
+const FILES = ["Newsletter.tsx", "theme.ts", DATA];
 let failures = 0;
 const ok = (cond: boolean, label: string, detail = "") => {
   console.log(`${cond ? "✓" : "✗"} ${label}${detail ? `  ${detail}` : ""}`);
@@ -21,8 +20,8 @@ const files: Record<string, string> = {};
 for (const f of FILES) files[f] = (await readFile(`template/${f}`, "utf8")).replace(/\r\n/g, "\n");
 
 // 1. Determinism
-const a = build(files, ASSET_BASE);
-const b = build(files, ASSET_BASE);
+const a = build(files);
+const b = build(files);
 ok(JSON.stringify(a.design) === JSON.stringify(b.design), "toDesign() is deterministic", `${a.blocks.length} blocks, schemaVersion ${a.design.schemaVersion}`);
 
 // 2. htmlIDs
@@ -70,7 +69,7 @@ function roundTrip(label: string, id: string, mutate: (v: string) => string, exp
   const lines = lineDiff(files[file], result.files[file]);
   ok(lines === 1, `${label}: ${file} diff is one line`, `${lines} line(s)`);
   // Rebuild from the patched files: the builder should now show exactly the edit.
-  const again = build(result.files, ASSET_BASE);
+  const again = build(result.files);
   const repull = pull(again, edited);
   ok(repull.changes.length === 0, `${label}: rebuilt template agrees with the builder`, repull.changes.length ? JSON.stringify(repull.changes).slice(0, 200) : "");
 }
@@ -89,7 +88,7 @@ const imageBlock = a.blocks.find((bl) => bl.type === "image" && a.bindings.get(b
 
 if (copyBlock) {
   const w = copyBlock.fields.text.match(word)![1];
-  roundTrip(`copy edit “${w}” in ${copyBlock.type}`, copyBlock.id, (v) => v.split(w).join("Zebra"), "copy", "issue.json");
+  roundTrip(`copy edit “${w}” in ${copyBlock.type}`, copyBlock.id, (v) => v.split(w).join("Zebra"), "copy", DATA);
 } else ok(false, "found a copy block to edit");
 if (codeBlock) {
   const w = codeBlock.fields.text.match(word)![1];
@@ -97,8 +96,18 @@ if (codeBlock) {
 } else ok(false, "found a code-text block to edit");
 if (imageBlock) {
   const src = imageBlock.fields.src;
-  roundTrip("image swap", imageBlock.id, (v) => v.split(JSON.stringify(src).slice(1, -1)).join("https://example.com/new.png"), "copy", "issue.json");
+  roundTrip("image swap", imageBlock.id, (v) => v.split(JSON.stringify(src).slice(1, -1)).join("https://example.com/new.png"), "copy", DATA);
 } else console.log("- no data-bound image to swap");
+
+// 4. The template's guardrails hold on builder edits: an over-long headline is held back.
+const headline = a.blocks.find((bl) => a.bindings.get(bl.id)?.fields.text && bl.type === "heading" && bl.fields.text === (a.issue.hero as { title: string }).title);
+if (headline) {
+  const long = "Dashboards that build themselves, check themselves and write the release notes";
+  const result = pull(a, editDesign(a.design, headline.id, (v) => v.split(headline.fields.text).join(long)));
+  const [only] = result.changes;
+  ok(result.changes.length === 1 && only.kind === "conflict" && /template refuses/.test(only.reason), "over-long headline is held back by the template", only?.kind === "conflict" ? only.reason : JSON.stringify(only));
+  ok(result.files[DATA] === files[DATA], "held-back edit leaves the values file untouched");
+} else ok(false, "found the headline block");
 
 console.log(failures ? `\n${failures} check(s) failed` : "\nall checks passed");
 process.exitCode = failures ? 1 : 0;
