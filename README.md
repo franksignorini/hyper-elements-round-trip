@@ -27,7 +27,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/media/round-trip.gif" alt="A headline is retyped in the Unlayer builder; seconds later issue.json changes on the left and a one-line diff appears. Then a title is edited in code and the builder follows. Then the change request opens with the email before and after." width="100%" />
+  <img src="docs/media/round-trip.gif" alt="A headline is retyped in the Unlayer builder; seconds later issue.values.json changes on the left and a one-line diff appears. Then a title is edited in code and the builder follows. Then the change request opens with the email before and after." width="100%" />
 </p>
 
 ---
@@ -47,8 +47,8 @@ Hyper Elements already ships both halves of a fix: `toDesign()` turns a template
       <p><b>1 · The marketer edits.</b><br/>One word of the headline, in Unlayer's builder, the way they always work.</p>
     </td>
     <td width="33%" valign="top">
-      <img src="docs/media/studio-diff.png" alt="Git diff: issue.json line 7 changed, +1 −1" />
-      <p><b>2 · Code gets one line.</b><br/>The word is traced to <code>issue.json</code> line 7 and patched in place. The loops in <code>Newsletter.tsx</code> are untouched.</p>
+      <img src="docs/media/studio-diff.png" alt="Git diff: issue.values.json line 10 changed, +1 −1" />
+      <p><b>2 · Code gets one line.</b><br/>The word is traced to the <code>hero.title</code> field, checked by the template, and patched in place on <code>issue.values.json</code> line 10. The loops in <code>Newsletter.tsx</code> are untouched.</p>
     </td>
     <td width="33%" valign="top">
       <img src="docs/media/studio-spot.png" alt="Spot the difference: the changed word boxed in orange, tagged with the word it replaced" />
@@ -66,7 +66,7 @@ Hyper Elements already ships both halves of a fix: `toDesign()` turns a template
       Change copy in the builder and <code>issue.values.json</code> changes by one line. Change the values or the JSX in the studio, or in your own editor with <b>Sync with disk</b>, and the builder reloads. Text written in the JSX itself (<i>"On the runway"</i>) is patched in <code>Newsletter.tsx</code>.
     </td>
     <td width="50%" valign="top">
-      <img src="docs/media/studio-push.png" alt="Studio: issue.json on the left, the Unlayer builder on the right, a receipt for each trip below" />
+      <img src="docs/media/studio-push.png" alt="Studio: issue.values.json on the left, the Unlayer builder on the right, a receipt for each trip below" />
     </td>
   </tr>
   <tr>
@@ -84,7 +84,7 @@ Hyper Elements already ships both halves of a fix: `toDesign()` turns a template
       The <b>Ownership map</b> sorts all 40 blocks into copy (the template's fields, each with its label and limit from <code>describe()</code>, like <i>Headline ≤48</i>), code text (in the JSX), locked (a <code>Layer</code> and a custom <code>defineElement()</code> stamp the builder can't edit) and fixed. <b>Click a block</b> and the code panel jumps to the line it comes from.
     </td>
     <td valign="top">
-      <img src="docs/media/studio-jump.png" alt="Ownership map: clicking the Quiet alerts block highlights its title line in issue.json" />
+      <img src="docs/media/studio-jump.png" alt="Ownership map: clicking the Quiet alerts block highlights its title line in issue.values.json" />
     </td>
   </tr>
   <tr>
@@ -102,7 +102,7 @@ Hyper Elements already ships both halves of a fix: `toDesign()` turns a template
       An edit that can't land in source is <b>held back with a reason</b>, never written with a wrong value. That covers the <code>01</code> that code numbers, a deleted block, a locked stamp, and <b>anything the template refuses</b>: a 70-character headline in the builder comes back as <i>"The template refuses it: Headline: is longer than 48 characters."</i> One click puts the builder back. A broken edit in code names its file and line, and the builder keeps the last good design.
     </td>
     <td valign="top">
-      <img src="docs/media/studio-error.png" alt="A missing comma in issue.json: the studio says the JSON isn't valid between lines 4 and 5, with a Go to line button" />
+      <img src="docs/media/studio-error.png" alt="A missing comma in issue.values.json: the studio says the JSON isn't valid, names the lines, with a Go to line button" />
     </td>
   </tr>
   <tr>

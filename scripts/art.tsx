@@ -5,8 +5,8 @@ import { Canvas, Circle, Line, Path, Polygon, Rect, Svg } from "@hyper-elements/
 import { renderImage } from "@hyper-elements/react/image";
 import type { ReactElement } from "react";
 
-const PAPER = "#efe9dd";
-const CREAM = "#fbf8f2";
+const PAPER = "#e3e8f2";
+const CREAM = "#f1f4fa";
 const INK = "#1d1b17";
 const BLUE = "#2b45ff";
 const ORANGE = "#ff5a2c";

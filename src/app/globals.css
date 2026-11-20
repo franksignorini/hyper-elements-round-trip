@@ -1,18 +1,19 @@
 /* Round Trip: a two-ink riso print. Blue is the engineer's ink, orange the
    marketer's. Where they overprint (multiply), the template happens. */
 :root {
-  --paper: #efe9dd;
-  --paper-2: #f7f3ea;
-  --paper-3: #e4dccb;
+  /* Pale blueprint stock: cool, so the two inks read as print, not as a warm UI. */
+  --paper: #e3e8f2;
+  --paper-2: #f1f4fa;
+  --paper-3: #d3dbe9;
   --ink: #1d1b17;
-  --ink-2: #3a362e;
-  --muted: #6f685c;
+  --ink-2: #2f3442;
+  --muted: #5a6274;
   --blue: #2b45ff;
   --blue-soft: #c9d0ff;
   --orange: #ff5a2c;
   --orange-soft: #ffd2c2;
   --over: #3a1d52;
-  --line: rgba(29, 27, 23, 0.14);
+  --line: rgba(20, 28, 48, 0.14);
   --radius: 14px;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --font-ui: var(--font-display), ui-sans-serif, system-ui, sans-serif;

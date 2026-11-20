@@ -178,7 +178,7 @@
   position: relative;
   border: 0;
   background: transparent;
-  color: #9a927f;
+  color: #8e97a8;
   font-family: var(--font-mono);
   font-size: 12px;
   padding: 0 12px;
@@ -604,7 +604,7 @@
 .receipt {
   position: relative;
   padding: 14px 16px 16px;
-  background: #fffdf8;
+  background: #f8faff;
   border: 1px solid var(--line);
   font-size: 13px;
   line-height: 1.45;
@@ -719,7 +719,7 @@
   border: 1.5px solid var(--ink);
   border-radius: 10px;
   overflow: hidden;
-  background: #fffdf8;
+  background: #f8faff;
 }
 .diffFileHead {
   padding: 8px 12px;
@@ -822,7 +822,7 @@
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: #fffdf8;
+  background: #f8faff;
   font: inherit;
   font-size: 12.5px;
   color: inherit;
@@ -1021,7 +1021,7 @@
   padding: 16px;
   border-radius: 10px;
   background: #1b1a1f;
-  color: #e9e3d6;
+  color: #e1e6f0;
   font-size: 12px;
   line-height: 1.6;
   overflow: auto;
@@ -1382,7 +1382,7 @@
   font-weight: 800;
   letter-spacing: 0.08em;
   font-variation-settings: "wdth" 75;
-  background: rgba(251, 248, 242, 0.85);
+  background: rgba(241, 244, 250, 0.85);
   mix-blend-mode: multiply;
   pointer-events: none;
   z-index: 10;

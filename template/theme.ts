@@ -8,16 +8,16 @@ export const ASSETS = "https://franksignorini.github.io/hyper-elements-round-tri
 // and toDesign() carries these values into the builder as each tool's defaults.
 export const kestrel = defineTheme({
   colors: {
-    background: "#efe9dd",
+    background: "#e3e8f2",
     foreground: "#1d1b17",
-    paper: "#fbf8f2",
+    paper: "#f1f4fa",
     ink: "#1d1b17",
-    muted: "#6f685c",
+    muted: "#5a6274",
     // Burnt orange: 4.5:1 on paper and under white button text (the art keeps the bright #ff5a2c).
     primary: "#c2410c",
     primaryForeground: "#ffffff",
     blue: "#2b45ff",
-    border: "#d9d1c1",
+    border: "#c9d2e3",
   },
   fonts: {
     body: "Helvetica, Arial, sans-serif",
@@ -53,6 +53,6 @@ export const kestrel = defineTheme({
       textTransform: "uppercase",
       color: "#c2410c",
     },
-    card: { backgroundColor: "#fbf8f2", padding: 32, gap: 14, borderRadius: 18 },
+    card: { backgroundColor: "#f1f4fa", padding: 32, gap: 14, borderRadius: 18 },
   },
 });

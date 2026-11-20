@@ -184,7 +184,7 @@ export function spotChanges(doc: Document, beforeHtml: string): SpotResult {
     padding: 5px 8px 4px; border-radius: 4px; border: 1.5px solid #1d1b17; box-shadow: 2px 2px 0 #1d1b17 }
 </style>
 <svg width="${width}" height="${height}" style="position:absolute;inset:0;overflow:visible">
-  <path class="dim" fill="rgba(239,233,221,.78)" fill-rule="evenodd" d="M0 0H${width}V${height}H0Z${holes}"/>
+  <path class="dim" fill="rgba(227,232,242,.78)" fill-rule="evenodd" d="M0 0H${width}V${height}H0Z${holes}"/>
   ${boxes
     .flatMap((m) =>
       m.boxes.map(

@@ -34,8 +34,8 @@ const IssueStamp = defineElement({
     date: prop.text({ label: "Date" }),
   },
   render: ({ issue, date }) => (
-    <Column style={{ border: "1.5px solid #fbf8f2", borderRadius: 999, padding: [5, 12] }}>
-      <Text style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.2, color: "#fbf8f2", textAlign: "center" }}>
+    <Column style={{ border: "1.5px solid #f1f4fa", borderRadius: 999, padding: [5, 12] }}>
+      <Text style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.2, color: "#f1f4fa", textAlign: "center" }}>
         {`${issue} · ${date}`.toUpperCase()}
       </Text>
     </Column>
@@ -113,7 +113,7 @@ export default template({
   render: (v) => (
     <Email width={600} lang="en" theme={kestrel} previewText={v.preview} title={v.hero.title}>
       {/* Masthead: wordmark and a locked stamp */}
-      <Section tokens={{ colors: { background: "#1d1b17", foreground: "#fbf8f2" } }} style={{ padding: [18, 28] }}>
+      <Section tokens={{ colors: { background: "#1d1b17", foreground: "#f1f4fa" } }} style={{ padding: [18, 28] }}>
         <Row style={{ alignItems: "center" }} stackOnMobile={false}>
           <Text
             style={{
@@ -136,7 +136,7 @@ export default template({
       <Layer>
         <Image src={{ src: `${ASSETS}/art/cover.png`, width: 1200, height: 560 }} alt="" />
         <Column style={{ padding: [36, 32], alignItems: "end" }}>
-          <Heading level={2} style={{ fontSize: 64, color: "#fbf8f2", textAlign: "right", letterSpacing: -2 }}>
+          <Heading level={2} style={{ fontSize: 64, color: "#f1f4fa", textAlign: "right", letterSpacing: -2 }}>
             {v.issue}
           </Heading>
         </Column>
@@ -190,10 +190,10 @@ export default template({
 
       {/* Numbers band, inverted */}
       <Section
-        tokens={{ colors: { background: "#2b45ff", foreground: "#fbf8f2" } }}
+        tokens={{ colors: { background: "#2b45ff", foreground: "#f1f4fa" } }}
         style={{ padding: [36, 28], gap: 6 }}
       >
-        <Text style={{ apply: ["kicker"], color: "#fbf8f2", textAlign: "center" }}>November in numbers</Text>
+        <Text style={{ apply: ["kicker"], color: "#f1f4fa", textAlign: "center" }}>November in numbers</Text>
         <Grid columns={3} style={{ gap: 12 }}>
           {v.stats.map((stat, i) => (
             <Column key={stat.label} style={{ gap: 2, alignItems: "center" }}>

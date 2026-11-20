@@ -41,19 +41,19 @@ const riso = HighlightStyle.define([
   { tag: [t.string, t.special(t.string)], color: "#ffb59c" },
   { tag: [t.number, t.bool, t.null], color: "#ffd166" },
   { tag: [t.tagName, t.typeName, t.className], color: "#7cf0c2" },
-  { tag: [t.attributeName, t.propertyName], color: "#c8c2b4" },
-  { tag: [t.comment, t.lineComment, t.blockComment], color: "#8a8272", fontStyle: "italic" },
-  { tag: [t.function(t.variableName), t.function(t.propertyName)], color: "#f4efe4" },
-  { tag: [t.operator, t.punctuation, t.bracket, t.angleBracket], color: "#9a927f" },
+  { tag: [t.attributeName, t.propertyName], color: "#bcc4d4" },
+  { tag: [t.comment, t.lineComment, t.blockComment], color: "#7f889a", fontStyle: "italic" },
+  { tag: [t.function(t.variableName), t.function(t.propertyName)], color: "#eef1f7" },
+  { tag: [t.operator, t.punctuation, t.bracket, t.angleBracket], color: "#8e97a8" },
 ]);
 
 const theme = EditorView.theme(
   {
-    "&": { backgroundColor: "transparent", color: "#efe9dd", height: "100%", fontSize: "12.5px" },
+    "&": { backgroundColor: "transparent", color: "#e3e8f2", height: "100%", fontSize: "12.5px" },
     ".cm-content": { fontFamily: "var(--font-mono), monospace", caretColor: "#ff5a2c", padding: "12px 0 80px" },
-    ".cm-gutters": { backgroundColor: "transparent", color: "#5d574b", border: "none" },
+    ".cm-gutters": { backgroundColor: "transparent", color: "#545c6c", border: "none" },
     ".cm-activeLine": { backgroundColor: "rgba(255,255,255,0.035)" },
-    ".cm-activeLineGutter": { backgroundColor: "transparent", color: "#c8c2b4" },
+    ".cm-activeLineGutter": { backgroundColor: "transparent", color: "#bcc4d4" },
     ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": { backgroundColor: "rgba(43,69,255,0.45) !important" },
     ".cm-cursor": { borderLeftColor: "#ff5a2c", borderLeftWidth: "2px" },
     ".cm-scroller": { lineHeight: "1.65" },

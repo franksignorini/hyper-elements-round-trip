@@ -4,7 +4,7 @@
 // Needs Chrome or Edge, and ffmpeg on PATH for the GIF.
 import { chromium } from "playwright-core";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 
 const base = process.argv[2] ?? "http://localhost:3100";
 const browsers = [
@@ -28,9 +28,18 @@ const browser = await chromium.launch({
 });
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// The template's art lives on the deployed site (ASSETS in template/theme.ts).
+// Answer those URLs from public/art, so the media shows the art in this checkout.
+const ART = "https://franksignorini.github.io/hyper-elements-round-trip/art/*";
+const localArt = (route) => {
+  const file = `public/art/${route.request().url().split("/art/")[1]}`;
+  return existsSync(file) ? route.fulfill({ body: readFileSync(file), contentType: "image/png" }) : route.continue();
+};
+
 // ---- landing ----
 {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1.5 });
+  await page.route(ART, localArt);
   await page.goto(base, { waitUntil: "networkidle" });
   // Catch the hero's proof loop on the step where the diff has landed.
   await wait(5600);
@@ -52,6 +61,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ---- studio, recorded with Chrome's screencast ----
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+await context.route(ART, localArt);
 const page = await context.newPage();
 rmSync("docs/media/raw", { recursive: true, force: true });
 mkdirSync("docs/media/raw", { recursive: true });
@@ -81,28 +91,39 @@ await wait(700);
 const hb = await heading.boundingBox();
 await page.mouse.click(hb.x + hb.width * 0.5, hb.y + hb.height * 0.5);
 await wait(1100);
-const hb2 = await heading.boundingBox();
-await page.mouse.click(hb2.x + 20, hb2.y + hb2.height * 0.3);
-await wait(500);
-// Select exactly the word "build", as a precise double-click would.
-await heading.evaluate((el) => {
-  const root = el.closest("[contenteditable]") ?? el;
-  const walker = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-    const at = node.textContent.indexOf("build");
-    if (at < 0) continue;
-    const range = root.ownerDocument.createRange();
-    range.setStart(node, at);
-    range.setEnd(node, at + 5);
-    const selection = root.ownerDocument.getSelection();
-    selection.removeAllRanges();
-    selection.addRange(range);
-    return;
-  }
-});
-await wait(600);
+// Select exactly the word "build", as a precise double-click would. The editor
+// takes a moment to enter text mode and can drop the selection, so check it.
+let selected = "";
+for (let attempt = 0; attempt < 3 && selected !== "build"; attempt++) {
+  const hb2 = await heading.boundingBox();
+  await page.mouse.click(hb2.x + 20, hb2.y + hb2.height * 0.3);
+  await wait(1000);
+  selected = await heading.evaluate((el) => {
+    const root = el.closest("[contenteditable]") ?? el;
+    const walker = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const at = node.textContent.indexOf("build");
+      if (at < 0) continue;
+      const range = root.ownerDocument.createRange();
+      range.setStart(node, at);
+      range.setEnd(node, at + 5);
+      const selection = root.ownerDocument.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      break;
+    }
+    return root.ownerDocument.getSelection()?.toString() ?? "";
+  });
+  await wait(600);
+  selected = await heading.evaluate((el) => el.ownerDocument.getSelection()?.toString() ?? "");
+}
+if (selected !== "build") throw new Error(`Couldn't select "build" in the builder headline (got "${selected}"): no media written for the studio.`);
 await page.keyboard.type("draw", { delay: 180 });
 await wait(2600);
+// A misfired edit makes misleading media: stop rather than capture it.
+await builder.getByText("Dashboards that draw themselves").first().waitFor({ timeout: 6000 }).catch(() => {
+  throw new Error('The builder headline isn\'t "Dashboards that draw themselves" after the edit: stopping the capture.');
+});
 await page.screenshot({ path: "docs/media/studio-pull.png" });
 await page.getByRole("tab", { name: /Git diff/ }).click();
 await wait(2200);
