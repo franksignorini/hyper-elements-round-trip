@@ -42,6 +42,8 @@ next-env.d.ts
 
 # generated before dev/build from template/
 /src/generated/
+# email-client verdicts and previews, run at build time for the static site
+/public/clients/
 
 # local logs and capture frames
 /logs/

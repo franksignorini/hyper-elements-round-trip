@@ -46,7 +46,18 @@ export function ClientStamps({ result, running, runKey }: Props) {
             "Rendering the template and asking the emulator…"
           )}
         </p>
-        {result && !result.emulator ? (
+        {result?.baked === "fresh" ? (
+          <p className={styles.dim}>
+            Checked by the emulator (<code>emailClients()</code>, <code>renderInEmailClients()</code>) when this site was
+            built: a static host has no server to run it on each trip. Click a stamp to see the email as that client draws it.
+          </p>
+        ) : result?.baked === "stale" ? (
+          <p className={styles.staticNote}>
+            These verdicts and previews are for the committed template, checked when this site was built. Your edits are
+            checked by <code>validate()</code> in your browser; run the studio locally (<code>npm run dev</code>) and the
+            emulator re-checks every trip.
+          </p>
+        ) : result && !result.emulator ? (
           <p className={styles.staticNote}>
             This static demo checks the email with <code>validate()</code> in your browser. The per-client emulator (
             <code>emailClients()</code>, <code>renderInEmailClients()</code>) runs on Node: clone the repo and run{" "}
@@ -112,7 +123,10 @@ export function ClientStamps({ result, running, runKey }: Props) {
             >
               <header className={styles.modalHead}>
                 <strong>{CLIENTS.find((c) => c.id === preview.id)?.name}</strong>
-                <span className={styles.dim}>{CLIENTS.find((c) => c.id === preview.id)?.sub} · emulated locally</span>
+                <span className={styles.dim}>
+                  {CLIENTS.find((c) => c.id === preview.id)?.sub} ·{" "}
+                  {STATIC_SITE ? "emulated when the site was built, committed template" : "emulated locally"}
+                </span>
                 <button className={styles.ghostButton} onClick={() => setPreview(null)}>
                   Close
                 </button>

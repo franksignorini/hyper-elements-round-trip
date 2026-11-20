@@ -135,7 +135,11 @@ export function ReviewModal({ open, head, files, checks, authors, onClose, onMer
                 <span data-ok="wait">… Re-checking the email clients</span>
               ) : (
                 <>
-                  {checks?.emulator ? (
+                  {checks?.baked === "stale" ? (
+                    <span data-ok="wait" title="The static site checked main when it was built; run it locally to emulate these edits">
+                      – Email clients: {passing}/{CLIENTS.length} on main, checked at build
+                    </span>
+                  ) : checks?.emulator ? (
                     <span data-ok={passing === CLIENTS.length}>
                       {passing === CLIENTS.length ? "✓" : "✗"} {passing}/{CLIENTS.length} email clients pass
                     </span>

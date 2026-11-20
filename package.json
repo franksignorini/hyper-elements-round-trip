@@ -4,15 +4,16 @@
   "private": true,
   "scripts": {
     "dev": "node scripts/dev.mjs",
-    "build": "node scripts/embed-sources.mjs && next build",
+    "build": "node scripts/embed-sources.mjs && tsx scripts/bake-clients.tsx && next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "node scripts/embed-sources.mjs && next typegen && tsc --noEmit",
     "art": "tsx scripts/art.tsx",
-    "check": "hyper-elements check template/Newsletter.tsx template/issue.values.json",
+    "check": "hyper-elements check template/Newsletter.tsx template/issue.values.json examples/welcome/Welcome.tsx examples/welcome/welcome.values.json",
     "push": "tsx scripts/roundtrip.tsx push",
     "pull": "tsx scripts/roundtrip.tsx pull",
-    "selftest": "tsx scripts/selftest.tsx"
+    "selftest": "tsx scripts/selftest.tsx",
+    "bake:clients": "tsx scripts/bake-clients.tsx"
   },
   "dependencies": {
     "@codemirror/lang-javascript": "^6.2.5",
@@ -47,7 +48,7 @@
     "typescript": "^5"
   },
   "hyperElements": {
-    "templates": ["template/**"]
+    "templates": ["template/**", "examples/**"]
   },
   "overrides": {
     "@hyper-elements/email-clients": "$@hyper-elements/email-clients"

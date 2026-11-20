@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "template": { "module": "./Welcome.tsx", "id": "examples.Welcome", "version": "1.0.0" },
+  "values": {
+    "preview": "Your workspace is ready. Here are three things worth doing in your first ten minutes.",
+    "headline": "Your workspace is ready",
+    "intro": "You can invite your team, connect a data source and build your first board today. Here is where to start.",
+    "steps": [
+      { "title": "Connect a source", "body": "Point it at your event stream or a CSV. The first chart shows up in under a minute." },
+      { "title": "Invite one teammate", "body": "Boards are better argued over. Share one with a colleague and leave a note on it." },
+      { "title": "Set one alert", "body": "Pick the number you check every morning and let it tell you when it moves." }
+    ],
+    "cta": { "label": "Open your workspace", "href": "https://example.com/app" },
+    "signoff": "Mara, who answers every reply to this email"
+  }
+}
